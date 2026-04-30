@@ -84,12 +84,17 @@ export async function readFileViaSsh(filePath: string): Promise<string | null> {
       reject(err);
     });
 
+    conn.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      finish([sshConfig.password]);
+    });
+
     conn.connect({
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
       password: sshConfig.password,
-      readyTimeout: 10000,
+      tryKeyboard: true,
+      readyTimeout: 30000,
     });
   });
 }
@@ -133,12 +138,17 @@ export async function writeFileViaSsh(filePath: string, content: string): Promis
       reject(err);
     });
 
+    conn.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      finish([sshConfig.password]);
+    });
+
     conn.connect({
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
       password: sshConfig.password,
-      readyTimeout: 10000,
+      tryKeyboard: true,
+      readyTimeout: 30000,
     });
   });
 }
@@ -170,12 +180,17 @@ export async function testSSHConnection(): Promise<boolean> {
       resolve(false);
     });
 
+    conn.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      finish([sshConfig.password]);
+    });
+
     conn.connect({
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
       password: sshConfig.password,
-      readyTimeout: 5000,
+      tryKeyboard: true,
+      readyTimeout: 30000,
     });
   });
 }

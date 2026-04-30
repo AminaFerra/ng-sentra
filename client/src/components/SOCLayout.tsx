@@ -69,28 +69,12 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    navigate("/login");
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8 space-y-3">
-            <div className="flex justify-center">
-              <img src="/manus-storage/ng-sentra-logo-hq_d96a9866.png" alt="NG-SENTRA" className="w-20 h-20 object-contain" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">NG-SENTRA</h1>
-              <p className="text-xs text-muted-foreground font-mono tracking-widest">SECURITY OPERATIONS CENTER</p>
-            </div>
-            <p className="text-muted-foreground text-sm">Authentication required to access the SOC dashboard.</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-            <div className="text-center space-y-1">
-              <p className="text-sm text-muted-foreground">Sign in with your authorized credentials</p>
-            </div>
-            <Button className="w-full" onClick={() => window.location.href = getLoginUrl()}>
-              <Shield className="w-4 h-4 mr-2" />
-              Authenticate to NG-SENTRA
-            </Button>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm font-mono">REDIRECTING TO LOGIN...</p>
         </div>
       </div>
     );

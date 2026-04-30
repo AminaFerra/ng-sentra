@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerLocalAuthRoutes } from "./localAuth";
 import { registerOAuthRoutes } from "./oauth";
+import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerStorageProxy } from "./storageProxy";
 import { setupTerminalHandler } from "./terminalHandler";
 import { appRouter } from "../routers";
@@ -43,7 +44,26 @@ async function startServer() {
   registerStorageProxy(app);
   registerLocalAuthRoutes(app);
   registerOAuthRoutes(app);
+  registerGoogleAuthRoutes(app);
   setupTerminalHandler(server);
+
+  // Webhook Receiver for n8n Telemetry
+  app.post("/api/soar/telemetry", async (req, res) => {
+    try {
+      const { insertSoarTelemetry } = await import("../db");
+      await insertSoarTelemetry({
+        playbook: req.body.playbook || "Unknown Playbook",
+        actionTaken: req.body.actionTaken || "Workflow Executed",
+        details: req.body.details ? (typeof req.body.details === "string" ? req.body.details : JSON.stringify(req.body.details)) : null,
+        executionId: req.body.executionId || "N/A"
+      });
+      res.json({ success: true, message: "Telemetry successfully logged to NG-SENTRA database" });
+    } catch (e: any) {
+      console.error("[SOAR Telemetry Error]:", e);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

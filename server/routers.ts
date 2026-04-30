@@ -188,6 +188,11 @@ export const appRouter = router({
 
   // ─── SOAR ──────────────────────────────────────────────────────────────────
   soar: router({
+    telemetryList: protectedProcedure.query(async () => {
+      const { getSoarTelemetryMetrics } = await import("./db");
+      return getSoarTelemetryMetrics();
+    }),
+
     list: protectedProcedure.query(async () => {
       return getAllSoarApproaches();
     }),
@@ -209,6 +214,42 @@ export const appRouter = router({
     trigger: analystProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
+        const approaches = await getAllSoarApproaches();
+        const approach = approaches.find((a: any) => a.id === input.id);
+
+        if (approach && approach.webhookUrl) {
+          try {
+            // Build a dynamic mock payload that satisfies the n8n Switch nodes
+            let mockRuleGroups = ["syslog"]; // Default for IP
+            if (approach.slug === "behavior") mockRuleGroups = ["mitre_attack"];
+            if (approach.slug === "file") mockRuleGroups = ["ossec", "syscheck"];
+            if (approach.slug === "url-realtime" || approach.slug === "url-scheduled") mockRuleGroups = ["web", "accesslog"];
+
+            await fetch(approach.webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source: 'NG-SENTRA SOAR Dashboard',
+                action: 'Manual Trigger',
+                timestamp: new Date().toISOString(),
+                rule: {
+                  groups: mockRuleGroups,
+                  level: 10,
+                  description: `Manual execution of ${approach.name} playbook`
+                },
+                data: {
+                  srcip: "185.199.108.153", // Public IP so n8n's isBad(ip) filter doesn't drop it
+                  url: "http://malicious.test.local/download",
+                  file_hash: "44d88612fea8a8f36de82e1278abb02f"
+                }
+              })
+            });
+          } catch (e: any) {
+            console.error("Failed to trigger n8n webhook:", e);
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Failed to trigger n8n webhook: ${e.message}` });
+          }
+        }
+
         await triggerSoarApproach(input.id);
         await logAction(ctx, "TRIGGER_SOAR", `soar:${input.id}`);
         return { success: true };

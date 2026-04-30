@@ -195,12 +195,17 @@ async function probeSystemdService(
       resolve(null);
     });
 
+    conn.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      finish([sshConfig.password]);
+    });
+
     conn.connect({
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
       password: sshConfig.password,
-      readyTimeout: 20000,
+      tryKeyboard: true,
+      readyTimeout: 30000,
     });
   });
 }
@@ -276,12 +281,17 @@ async function probeDockerContainer(
       resolve(null);
     });
 
+    conn.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      finish([sshConfig.password]);
+    });
+
     conn.connect({
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
       password: sshConfig.password,
-      readyTimeout: 20000,
+      tryKeyboard: true,
+      readyTimeout: 30000,
     });
   });
 }

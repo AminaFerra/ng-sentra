@@ -75,12 +75,17 @@ export function setupTerminalHandler(httpServer: Server) {
             ws.close();
           });
 
+          sshClient.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+            finish([sshConfig.password]);
+          });
+
           sshClient.connect({
             host: sshConfig.host,
             port: sshConfig.port,
             username: sshConfig.user,
             password: sshConfig.password,
-            readyTimeout: 10000,
+            tryKeyboard: true,
+            readyTimeout: 30000,
           });
 
         } else if (data.type === "input" && stream) {

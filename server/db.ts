@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, like, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import type { PoolOptions } from "mysql2";
-import { AiModel, AuditLog, Component, InsertAiModel, InsertAuditLog, InsertComponent, InsertSoarApproach, InsertUser, SoarApproach, SystemSetting, User, SshCredential, InsertSshCredential, WazuhSetting, InsertWazuhSetting, aiModels, auditLogs, components, soarApproaches, systemSettings, users, sshCredentials, wazuhSettings } from "../drizzle/schema";
+import { AiModel, AuditLog, Component, InsertAiModel, InsertAuditLog, InsertComponent, InsertSoarApproach, InsertUser, SoarApproach, SystemSetting, User, SshCredential, InsertSshCredential, WazuhSetting, InsertWazuhSetting, aiModels, auditLogs, components, soarApproaches, systemSettings, users, sshCredentials, wazuhSettings, soarTelemetry, InsertSoarTelemetry, SoarTelemetry } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -327,3 +327,19 @@ export async function upsertWazuhSettings(data: Partial<InsertWazuhSetting>): Pr
     await db.insert(wazuhSettings).values({ ...data, createdAt: new Date(), updatedAt: new Date() } as InsertWazuhSetting);
   }
 }
+
+// ─── SOAR Telemetry ──────────────────────────────────────────────────────────
+
+export async function insertSoarTelemetry(data: any): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(soarTelemetry).values(data);
+}
+
+export async function getSoarTelemetryMetrics(): Promise<{ logs: any[] }> {
+  const db = await getDb();
+  if (!db) return { logs: [] };
+  const logs = await db.select().from(soarTelemetry).orderBy(desc(soarTelemetry.createdAt)).limit(1000);
+  return { logs };
+}
+

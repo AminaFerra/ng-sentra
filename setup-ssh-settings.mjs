@@ -21,7 +21,7 @@ const pool = createPool({
 });
 
 const settings = [
-  { key: 'ssh_host', value: '192.168.1.14', label: 'SSH Host', description: 'VirtualBox host IP for SSH health checks' },
+  { key: 'ssh_host', value: '10.211.78.229', label: 'SSH Host', description: 'VirtualBox host IP for SSH health checks' },
   { key: 'ssh_port', value: '2222', label: 'SSH Port', description: 'SSH port (2222 for VirtualBox port forwarding)' },
   { key: 'ssh_user', value: 'ziad', label: 'SSH User', description: 'SSH username for VirtualBox host' },
   { key: 'ssh_password', value: '', label: 'SSH Password', description: 'SSH password for VirtualBox host (set this!)' },

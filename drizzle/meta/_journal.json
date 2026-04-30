@@ -50,6 +50,13 @@
       "when": 1777156874105,
       "tag": "0006_woozy_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1777506334937,
+      "tag": "0007_cool_khan",
+      "breakpoints": true
     }
   ]
 }

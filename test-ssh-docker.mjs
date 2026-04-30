@@ -58,12 +58,18 @@ async function testSSH() {
   
   conn.on('error', (err) => console.error("SSH Error:", err));
   
+  conn.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+    console.log("Keyboard-interactive prompts:", prompts);
+    finish([map.ssh_password]);
+  });
+  
   conn.connect({
     host: map.ssh_host,
     port: parseInt(map.ssh_port),
     username: map.ssh_user,
     password: map.ssh_password,
-    readyTimeout: 5000,
+    tryKeyboard: true,
+    readyTimeout: 20000,
   });
 }
 

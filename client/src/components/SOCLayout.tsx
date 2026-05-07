@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Activity, AlertTriangle, Brain, ChevronRight, Globe, HardDrive,
-  LayoutDashboard, LogOut, Menu, Moon, Settings, Shield, Sun, Users, Zap, X
+  LayoutDashboard, LogOut, Menu, Moon, Settings, Shield, Sun, Users, Zap, X, Target
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/components", label: "Components", icon: Shield },
   { href: "/soar", label: "SOAR Panel", icon: Zap },
+  { href: "/security", label: "Security Assessment", icon: Target },
   { href: "/ai-models", label: "AI Models Health", icon: Activity },
   { href: "/ai-feed", label: "AI Threat Feed", icon: Brain },
 ];

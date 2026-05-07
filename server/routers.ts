@@ -3,6 +3,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { securityRouter } from "./routers/security";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   createAuditLog, deleteUser, getAllAiModels, getAllComponents, getAllSoarApproaches,
@@ -472,15 +473,10 @@ export const appRouter = router({
         return { success: false, message: `Unexpected error: ${error.message}` };
       }
     }),
-
-
-
-
-
-
-
-
   }),
+
+  // ─── Security Assessment ───────────────────────────────────────────────────
+  security: securityRouter,
 });
 
 export type AppRouter = typeof appRouter;

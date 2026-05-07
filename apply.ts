@@ -32,6 +32,53 @@ async function run() {
     }
   }
   
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`security_scans\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`target\` varchar(256) NOT NULL,
+        \`scannerType\` enum('nmap','zap','openvas','custom') NOT NULL DEFAULT 'nmap',
+        \`status\` enum('pending','running','completed','failed') NOT NULL DEFAULT 'pending',
+        \`resultSummary\` text,
+        \`createdAt\` timestamp NOT NULL DEFAULT (now()),
+        \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`security_scans_id\` PRIMARY KEY(\`id\`)
+    );
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`emulation_tests\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`name\` varchar(256) NOT NULL,
+        \`techniqueId\` varchar(64),
+        \`status\` enum('planned','executed','detected','missed') NOT NULL DEFAULT 'planned',
+        \`notes\` text,
+        \`executedAt\` timestamp,
+        \`createdAt\` timestamp NOT NULL DEFAULT (now()),
+        \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`emulation_tests_id\` PRIMARY KEY(\`id\`)
+    );
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS \`pentest_findings\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`title\` varchar(256) NOT NULL,
+        \`severity\` enum('low','medium','high','critical') NOT NULL DEFAULT 'medium',
+        \`status\` enum('open','in_progress','resolved','accepted_risk') NOT NULL DEFAULT 'open',
+        \`description\` text,
+        \`remediation\` text,
+        \`createdAt\` timestamp NOT NULL DEFAULT (now()),
+        \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`pentest_findings_id\` PRIMARY KEY(\`id\`)
+    );
+  `);
+
+  try {
+    await db.execute(sql`ALTER TABLE \`security_scans\` MODIFY COLUMN \`scannerType\` enum('nmap','zap','openvas','custom','full_suite') NOT NULL DEFAULT 'nmap';`);
+  } catch (e) {
+    console.warn("Failed to alter security_scans:", e);
+  }
+
   console.log("Migration successful!");
   process.exit(0);
 }

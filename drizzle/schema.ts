@@ -139,3 +139,44 @@ export const soarTelemetry = mysqlTable("soar_telemetry", {
 
 export type SoarTelemetry = typeof soarTelemetry.$inferSelect;
 export type InsertSoarTelemetry = typeof soarTelemetry.$inferInsert;
+
+export const securityScans = mysqlTable("security_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  target: varchar("target", { length: 256 }).notNull(),
+  scannerType: mysqlEnum("scannerType", ["nmap", "zap", "openvas", "custom", "full_suite"]).default("nmap").notNull(),
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  resultSummary: text("resultSummary"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SecurityScan = typeof securityScans.$inferSelect;
+export type InsertSecurityScan = typeof securityScans.$inferInsert;
+
+export const emulationTests = mysqlTable("emulation_tests", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  techniqueId: varchar("techniqueId", { length: 64 }), // e.g., T1548
+  status: mysqlEnum("status", ["planned", "executed", "detected", "missed"]).default("planned").notNull(),
+  notes: text("notes"),
+  executedAt: timestamp("executedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EmulationTest = typeof emulationTests.$inferSelect;
+export type InsertEmulationTest = typeof emulationTests.$inferInsert;
+
+export const pentestFindings = mysqlTable("pentest_findings", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["open", "in_progress", "resolved", "accepted_risk"]).default("open").notNull(),
+  description: text("description"),
+  remediation: text("remediation"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PentestFinding = typeof pentestFindings.$inferSelect;
+export type InsertPentestFinding = typeof pentestFindings.$inferInsert;

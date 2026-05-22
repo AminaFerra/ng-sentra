@@ -15,7 +15,7 @@ export const ENV = {
     return process.env.OWNER_OPEN_ID ?? "";
   },
   get localAuthEnabled() {
-    return process.env.LOCAL_AUTH_ENABLED === "true";
+    return process.env.LOCAL_AUTH_ENABLED !== "false";
   },
   get localAuthOpenId() {
     return process.env.LOCAL_AUTH_OPEN_ID ?? "local-admin";

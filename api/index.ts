@@ -3,6 +3,7 @@ import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../server/routers";
 import { createContext } from "../server/_core/context";
+import { insertSoarTelemetry } from "../server/db";
 
 // Load .env first, then override with .env.local when present.
 dotenv.config();
@@ -28,7 +29,6 @@ registerGoogleAuthRoutes(app);
 // Webhook Receiver for n8n Telemetry
 app.post("/api/soar/telemetry", async (req, res) => {
   try {
-    const { insertSoarTelemetry } = await import("../server/db");
     await insertSoarTelemetry({
       playbook: req.body.playbook || "Unknown Playbook",
       actionTaken: req.body.actionTaken || "Workflow Executed",

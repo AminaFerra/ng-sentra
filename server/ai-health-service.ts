@@ -13,7 +13,6 @@
  */
 
 import { getSSHConfig } from "./ssh-service";
-import { Client } from "ssh2";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -130,7 +129,15 @@ async function probeSystemdService(
   const sshConfig = await getSSHConfig();
   if (!sshConfig) return null;
 
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
+    let Client;
+    try {
+      const ssh2 = await import("ssh2");
+      Client = ssh2.Client;
+    } catch (e) {
+      console.warn("ssh2 module not available, skipping SSH check");
+      return resolve(null);
+    }
     const conn = new Client();
     const timeout = setTimeout(() => {
       conn.end();
@@ -221,7 +228,15 @@ async function probeDockerContainer(
   const sshConfig = await getSSHConfig();
   if (!sshConfig) return null;
 
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
+    let Client;
+    try {
+      const ssh2 = await import("ssh2");
+      Client = ssh2.Client;
+    } catch (e) {
+      console.warn("ssh2 module not available, skipping SSH check");
+      return resolve(null);
+    }
     const conn = new Client();
     const timeout = setTimeout(() => {
       conn.end();

@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "nodeVersion": "20.x"
+}

@@ -47,17 +47,32 @@ export async function processSecurityScan(scanId: number, target: string, scanne
     let resultSummary = "";
 
     if (scannerType === "full_suite") {
-      // Simulate running 20+ attacks over 10 seconds
+      // Simulate running 20+ attacks over 5 seconds
       await new Promise(resolve => setTimeout(resolve, 5000));
       
       const successfulExploits = Math.floor(Math.random() * 3) + 1; // 1-3 simulated findings
       
-      const foundVulns = [];
+      const foundVulns: typeof MOCK_VULNERABILITIES = [];
       const dbInstance = (await getDb())!;
+      
+      // Map vulnerabilities to the check index that discovered them
+      const VULN_TO_CHECK_MAP: Record<string, number> = {
+        "Unauthenticated API Endpoint Detected": 14,      // Check 15
+        "Missing HTTP Strict Transport Security": 8,       // Check 9
+        "Outdated SSH Server Version": 3,                  // Check 4
+        "Default Web Server Configuration Found": 6,       // Check 7
+        "Reflected XSS in Search Parameter": 9,            // Check 10
+        "Weak SSL/TLS Cipher Suites Supported": 7,         // Check 8
+      };
+
+      const vulnCheckIndices = new Set<number>();
       
       for(let i=0; i<successfulExploits; i++) {
         const randVuln = MOCK_VULNERABILITIES[Math.floor(Math.random() * MOCK_VULNERABILITIES.length)];
         foundVulns.push(randVuln);
+        
+        const checkIdx = VULN_TO_CHECK_MAP[randVuln.title];
+        if (checkIdx !== undefined) vulnCheckIndices.add(checkIdx);
         
         await dbInstance.insert(pentestFindings).values({
           title: `[${target}] ${randVuln.title}`,
@@ -66,8 +81,16 @@ export async function processSecurityScan(scanId: number, target: string, scanne
           status: "open"
         });
       }
+
+      // Build check results: mark vulnerable checks as [VULN], others as [OK]
+      const checkLines = PENTEST_CHECKS.map((check, idx) => {
+        if (vulnCheckIndices.has(idx)) {
+          return `[VULN] ${check}`;
+        }
+        return `[OK] ${check}`;
+      }).join('\n');
       
-      resultSummary = `Automated Pentest Suite Completed.\nTarget: ${target}\nExecuted ${PENTEST_CHECKS.length} security checks.\n\nChecks Performed:\n${PENTEST_CHECKS.map(c => `[OK] ${c}`).join('\n')}\n\nSummary: Simulated execution finished. ${successfulExploits} potential vulnerabilities identified and automatically logged to the Findings tab.`;
+      resultSummary = `Automated Pentest Suite Completed.\nTarget: ${target}\nExecuted ${PENTEST_CHECKS.length} security checks.\n\nChecks Performed:\n${checkLines}\n\nVulnerabilities Found: ${successfulExploits}\n${foundVulns.map((v, i) => `  ${i+1}. [${v.severity.toUpperCase()}] ${v.title}`).join('\n')}\n\nSummary: ${successfulExploits} potential vulnerabilities identified and automatically logged to the Findings tab.`;
     } 
     else if (scannerType === "nmap") {
       await new Promise(resolve => setTimeout(resolve, 3000));

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { appRouter } from "./routers";
+import { appRouter } from "./routes";
 import type { TrpcContext } from "./_core/context";
 
 // ─── Mock DB ─────────────────────────────────────────────────────────────────

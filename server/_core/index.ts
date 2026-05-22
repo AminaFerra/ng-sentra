@@ -7,11 +7,11 @@ import { registerLocalAuthRoutes } from "./localAuth";
 import { registerOAuthRoutes } from "./oauth";
 import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerStorageProxy } from "./storageProxy";
+import { getSessionCookieOptions } from "./cookies";
 import { setupTerminalHandler } from "./terminalHandler";
-import { appRouter } from "../routers";
+import { appRouter } from "../routes";
 import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
-
+// Dynamic imports used to prevent Vite devDependencies from crashing Vercel Serverless environment
 // Load .env first, then override with .env.local when present.
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
@@ -78,8 +78,10 @@ app.use(
 async function startServer() {
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
   }
 

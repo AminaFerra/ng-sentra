@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../server/routers";
+import { appRouter } from "../server/routes";
 import { createContext } from "../server/_core/context";
 import { insertSoarTelemetry } from "../server/db";
 

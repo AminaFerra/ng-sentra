@@ -97,12 +97,5 @@ async function startServer() {
   });
 }
 
-if (process.env.VERCEL || process.env.VERCEL_ENV) {
-  // On Vercel, we export the Express app for Serverless Functions
-  console.log("Running in Vercel Serverless mode");
-} else {
-  // Otherwise, start the standard Node.js HTTP server
-  startServer().catch(console.error);
-}
-
+startServer().catch(console.error);
 export default app;

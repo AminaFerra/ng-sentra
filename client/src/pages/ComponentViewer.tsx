@@ -56,8 +56,22 @@ export default function ComponentViewer() {
   const Icon = iconMap[component.icon ?? "Shield"] ?? Shield;
   const accessType = component.accessType ?? "iframe";
   const atInfo = accessTypeLabels[accessType] ?? accessTypeLabels.iframe;
-  const launchUrl = component.url
+  
+  // The raw internal URL (e.g., https://192.168.1.14:5601)
+  const internalUrl = component.url
     ? (component.port ? `${component.url}:${component.port}` : component.url)
+    : null;
+
+  // Smart Routing:
+  // If we are accessing the dashboard from the local network (localhost or 192.168.x.x)
+  // we should connect directly to the VM for maximum performance.
+  // Otherwise (if we are on Cloudflare), we must use the proxy.
+  const isLocalNetwork = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' || 
+                         window.location.hostname.startsWith('192.168.');
+
+  const launchUrl = internalUrl 
+    ? (isLocalNetwork ? internalUrl : `/proxy/${slug}`) 
     : null;
 
   const canLaunch = accessType === "iframe" && !!launchUrl;

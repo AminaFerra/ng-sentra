@@ -7,6 +7,18 @@ import { getSessionCookieOptions } from "./cookies";
 import { ENV } from "./env";
 import { sdk } from "./sdk";
 
+/**
+ * Build the Google OAuth callback URL dynamically from the incoming request.
+ * This ensures the redirect works correctly whether the user accesses the app
+ * via localhost, a Cloudflare Tunnel URL, or a custom domain.
+ */
+function buildCallbackUrl(req: Request): string {
+  // Trust Cloudflare / reverse-proxy headers for the real origin
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
+  return `${protocol}://${host}/api/auth/google/callback`;
+}
+
 export function registerGoogleAuthRoutes(app: Express) {
   const clientID = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -21,7 +33,8 @@ export function registerGoogleAuthRoutes(app: Express) {
       {
         clientID,
         clientSecret,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/api/auth/google/callback",
+        // Placeholder — overridden per-request in the /api/auth/google route below
+        callbackURL: "http://localhost:3000/api/auth/google/callback",
         scope: ["profile", "email"],
       },
       async (_accessToken, _refreshToken, profile, done) => {
@@ -49,31 +62,40 @@ export function registerGoogleAuthRoutes(app: Express) {
   app.use(passport.initialize());
 
   // Step 1: Redirect user to Google consent screen
-  app.get(
-    "/api/auth/google",
-    passport.authenticate("google", { scope: ["profile", "email"], session: false })
-  );
+  // We dynamically set the callbackURL based on the request origin
+  app.get("/api/auth/google", (req: Request, res: Response, next) => {
+    const callbackURL = buildCallbackUrl(req);
+    console.log("[GoogleAuth] Using callback URL:", callbackURL);
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      session: false,
+      callbackURL,
+    })(req, res, next);
+  });
 
   // Step 2: Google redirects back here with code
-  app.get(
-    "/api/auth/google/callback",
-    passport.authenticate("google", { session: false, failureRedirect: "/login?error=google_failed" }),
-    async (req: Request, res: Response) => {
-      try {
-        const user = req.user as { openId: string; name: string; email: string | null };
+  app.get("/api/auth/google/callback", (req: Request, res: Response, next) => {
+    const callbackURL = buildCallbackUrl(req);
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: "/login?error=google_failed",
+      callbackURL,
+    })(req, res, next);
+  }, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as { openId: string; name: string; email: string | null };
 
-        const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.name,
-          expiresInMs: ONE_YEAR_MS,
-        });
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name,
+        expiresInMs: ONE_YEAR_MS,
+      });
 
-        const cookieOptions = getSessionCookieOptions(req);
-        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        res.redirect(302, "/");
-      } catch (err) {
-        console.error("[GoogleAuth] Callback failed:", err);
-        res.redirect("/login?error=session_failed");
-      }
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.redirect(302, "/");
+    } catch (err) {
+      console.error("[GoogleAuth] Callback failed:", err);
+      res.redirect("/login?error=session_failed");
     }
-  );
+  });
 }

@@ -1,0 +1,159 @@
+# NG-SENTRA Cloud Deployment Plan
+
+## The Core Problem
+
+Your NG-SENTRA dashboard is not just a website — it's a **SOC command center** that actively connects to local infrastructure:
+
+| Feature | Connects To | Protocol |
+|---|---|---|
+| **SSH Terminal** | VirtualBox VM (`192.168.1.14:22`) | SSH/WebSocket |
+| **AI Health Checks** | Systemd services & Docker containers on VM | SSH |
+| **Wazuh Threat Feed** | Elasticsearch on VM (`192.168.1.14:9200`) | HTTPS |
+| **Security Scanner** | Targets on your local network | TCP/UDP |
+| **Database** | TiDB Cloud (public internet) | MySQL/TLS |
+
+> [!IMPORTANT]
+> **The fundamental challenge:** Cloud servers (Vercel, Render, AWS) **cannot reach `192.168.1.14`** — it's a private IP that only exists on your home network. Any cloud-hosted backend would lose SSH, Wazuh, AI health checks, and the terminal.
+
+The **only service** that works from the cloud is TiDB (your database), because it has a public URL.
+
+---
+
+## Three Deployment Strategies Compared
+
+| | **Option A: Cloudflare Tunnel** | **Option B: Split Architecture** | **Option C: Full Cloud VPS** |
+|---|---|---|---|
+| **Frontend** | Served from your machine | Vercel (static) | VPS (Hetzner/DigitalOcean) |
+| **Backend** | Runs on your machine | Runs on your machine | Runs on VPS |
+| **Public URL** | ✅ `ng-sentra.yourdomain.com` | ✅ Vercel URL | ✅ VPS IP or domain |
+| **SSH Terminal** | ✅ Works | ✅ Works | ❌ Can't reach `192.168.1.14` |
+| **Wazuh Alerts** | ✅ Works | ✅ Works | ❌ Can't reach `192.168.1.14` |
+| **AI Health** | ✅ Works | ✅ Works | ❌ Can't reach VM |
+| **Credit Card** | ❌ Not needed | ❌ Not needed | ✅ Required |
+| **Cost** | **$0** (free domain optional) | **$0** | **$5-7/month** |
+| **Always On** | ⚠️ Only when your PC is on | ⚠️ Only when your PC is on | ✅ 24/7 |
+| **Setup Difficulty** | Easy (10 min) | Medium (30 min) | Hard + requires VPN tunnel |
+| **HTTPS** | ✅ Automatic | ✅ Automatic | Manual (Let's Encrypt) |
+
+---
+
+## ✅ Recommended: Option A — Cloudflare Tunnel
+
+This is the best approach for your situation. It gives you a **real public HTTPS URL** while keeping the backend on your machine where it can access everything.
+
+### How It Works
+
+```mermaid
+graph LR
+    A["🌐 Browser<br/>Anyone on the Internet"] -->|HTTPS| B["☁️ Cloudflare Edge<br/>ng-sentra.yourdomain.com"]
+    B -->|Encrypted Tunnel| C["🖥️ Your Windows PC<br/>cloudflared daemon"]
+    C -->|localhost:3000| D["⚡ NG-SENTRA Server<br/>Express + tRPC + Vite"]
+    D -->|SSH:22| E["🖧 VirtualBox VM<br/>192.168.1.14"]
+    D -->|HTTPS:9200| F["🔍 Wazuh/Elastic<br/>192.168.1.14:9200"]
+    D -->|MySQL/TLS| G["🗄️ TiDB Cloud<br/>gateway05.tidbcloud.com"]
+```
+
+**Traffic flow:**
+1. User visits `https://ng-sentra.yourdomain.com`
+2. Cloudflare routes the request through an encrypted tunnel to your PC
+3. Your PC runs the full NG-SENTRA server on `localhost:3000`
+4. The server can access your VirtualBox VM, Wazuh, and everything on your local network
+5. Response goes back through the tunnel → Cloudflare → user's browser
+
+### Step-by-Step Setup
+
+#### Step 1: Install `cloudflared` on Windows
+```powershell
+# Option A: Using winget (recommended)
+winget install --id Cloudflare.cloudflared
+
+# Option B: Download from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+```
+
+#### Step 2: Quick Test (No account needed!)
+```powershell
+# This gives you a temporary public URL instantly - no signup required
+cloudflared tunnel --url http://localhost:3000
+```
+This will output something like:
+```
+Your quick Tunnel has been created! Visit it at:
+https://random-words-here.trycloudflare.com
+```
+You can share that URL with anyone and they'll see your NG-SENTRA dashboard!
+
+#### Step 3: Permanent Setup (Free Cloudflare account)
+For a persistent, named URL:
+1. Create a free account at [dash.cloudflare.com](https://dash.cloudflare.com) (no credit card)
+2. Add a domain (you can get a free `.eu.org` or `.pp.ua` domain, or use any domain you own)
+3. Create a named tunnel:
+```powershell
+cloudflared tunnel login
+cloudflared tunnel create ng-sentra
+cloudflared tunnel route dns ng-sentra ng-sentra.yourdomain.com
+```
+4. Create config file at `~/.cloudflared/config.yml`:
+```yaml
+tunnel: <your-tunnel-id>
+credentials-file: C:\Users\ZIAD\.cloudflared\<tunnel-id>.json
+
+ingress:
+  - hostname: ng-sentra.yourdomain.com
+    service: http://localhost:3000
+  - service: http_status:404
+```
+5. Run as a Windows service (auto-starts on boot):
+```powershell
+cloudflared service install
+```
+
+### What You Need To Do Before Deployment
+
+> [!NOTE]
+> The codebase is **already 100% ready**. No code changes are needed. You just need to:
+
+1. Build the production version: `pnpm build`
+2. Start the server: `npm run start`
+3. Run cloudflared alongside it
+
+---
+
+## Option B: Split Architecture (Frontend on Vercel + Backend Local)
+
+If you prefer having the frontend "truly" on the cloud:
+
+- Deploy **only the React frontend** to Vercel as a static site
+- Run the **backend** locally with a Cloudflare Tunnel
+- Configure the frontend to call the tunneled backend URL
+
+> [!WARNING]
+> This adds complexity: you need CORS configuration, separate build processes, and the frontend must be configured with the tunnel URL at build time. Option A is simpler and achieves the same result.
+
+---
+
+## Option C: Full Cloud VPS (Future — When Budget Available)
+
+When you eventually have budget, the ideal production setup would be:
+
+1. **VPS** (Hetzner €3.79/mo or DigitalOcean $6/mo) running NG-SENTRA
+2. **WireGuard VPN** tunnel from VPS → your home network
+3. Backend accesses `192.168.1.14` through the VPN tunnel
+4. Everything is always-on 24/7
+
+This is the most robust but requires a credit card and VPN configuration.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Choose your approach:**
+> 1. **Option A (Cloudflare Tunnel)** — Recommended. Free, simple, everything works. Your PC must be on for the dashboard to be accessible.
+> 2. **Option B (Split)** — Only if you specifically want the frontend on Vercel separately.
+> 3. **Option C (VPS)** — Only when you have budget in the future.
+
+## Open Questions
+
+1. **Do you own a domain name?** If not, we can use Cloudflare's free quick tunnels (`*.trycloudflare.com`) or get a free domain.
+2. **Is it okay that the dashboard is only accessible when your PC is running?** (This is the tradeoff of keeping the backend local.)
+3. **Do you want me to proceed with Option A (Cloudflare Tunnel) setup?**

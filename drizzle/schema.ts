@@ -5,11 +5,19 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  isVerified: boolean("isVerified").default(false).notNull(),
+  twoFactorEnabled: boolean("twoFactorEnabled").default(false).notNull(),
+  twoFactorType: mysqlEnum("twoFactorType", ["totp", "email"]),
+  twoFactorSecret: varchar("twoFactorSecret", { length: 255 }),
+  otpCode: varchar("otpCode", { length: 10 }),
+  otpExpiresAt: timestamp("otpExpiresAt"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "Admin", "Analyst", "Viewer"]).default("Viewer").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  lockedUntil: timestamp("lockedUntil"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -49,6 +57,19 @@ export const auditLogs = mysqlTable("audit_logs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+export const authAuditLogs = mysqlTable("auth_audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  eventType: varchar("eventType", { length: 50 }).notNull(), // LOGIN_SUCCESS, LOGIN_FAILED, 2FA_FAILED, ACCOUNT_LOCKED
+  ipAddress: varchar("ipAddress", { length: 64 }).notNull(),
+  userAgent: text("userAgent").notNull(),
+  riskScore: int("riskScore").default(0),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type AuthAuditLog = typeof authAuditLogs.$inferSelect;
+export type InsertAuthAuditLog = typeof authAuditLogs.$inferInsert;
 
 export const soarApproaches = mysqlTable("soar_approaches", {
   id: int("id").autoincrement().primaryKey(),
@@ -180,3 +201,22 @@ export const pentestFindings = mysqlTable("pentest_findings", {
 
 export type PentestFinding = typeof pentestFindings.$inferSelect;
 export type InsertPentestFinding = typeof pentestFindings.$inferInsert;
+
+// ─── Copilot Sessions ────────────────────────────────────────────────────────
+
+export const copilotSessions = mysqlTable("copilot_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
+  title: varchar("title", { length: 256 }),
+  userId: int("userId"),
+  userName: varchar("userName", { length: 256 }),
+  userRole: varchar("userRole", { length: 32 }),
+  messages: text("messages").notNull(), // JSON: {role, content}[]
+  snapshotSummary: text("snapshotSummary"), // brief text summary of context used
+  isArchived: boolean("isArchived").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CopilotSession = typeof copilotSessions.$inferSelect;
+export type InsertCopilotSession = typeof copilotSessions.$inferInsert;

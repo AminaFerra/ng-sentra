@@ -209,10 +209,30 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
+    return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  }
+  const key = ENV.forgeApiKey;
+  if (key && key.startsWith("sk-")) {
+    return "https://api.openai.com/v1/chat/completions";
+  }
+  if (key && key.startsWith("AIzaSy")) {
+    return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+  }
+  return "https://forge.manus.im/v1/chat/completions";
+};
+
+const resolveModel = () => {
+  const key = ENV.forgeApiKey;
+  if (key && key.startsWith("sk-")) {
+    return "gpt-4o-mini";
+  }
+  if (key && key.startsWith("AIzaSy")) {
+    return "gemini-2.5-flash";
+  }
+  return "gemini-2.5-flash";
+};
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
@@ -265,6 +285,101 @@ const normalizeResponseFormat = ({
   };
 };
 
+export type StreamParams = {
+  messages: Message[];
+  maxTokens?: number;
+  signal?: AbortSignal;
+  onToken: (chunk: string) => void;
+  onDone: () => void;
+  onError: (err: Error) => void;
+};
+
+/**
+ * Stream an LLM response token-by-token via the OpenAI-compatible SSE API.
+ * Calls onToken for each text chunk, onDone when the stream ends, onError on failure.
+ */
+export async function streamLLM(params: StreamParams): Promise<void> {
+  assertApiKey();
+
+  const { messages, maxTokens, signal, onToken, onDone, onError } = params;
+  const model = resolveModel();
+
+  const payload: Record<string, unknown> = {
+    model,
+    messages: messages.map(normalizeMessage),
+    max_tokens: maxTokens ?? (model.includes("gemini") ? 8192 : 4096),
+    stream: true,
+  };
+
+  let response: Response;
+  try {
+    response = await fetch(resolveApiUrl(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${ENV.forgeApiKey}`,
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (err: any) {
+    onError(new Error(`LLM stream request failed: ${err?.message ?? err}`));
+    return;
+  }
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "(no body)");
+    onError(new Error(`LLM stream failed: ${response.status} ${response.statusText} – ${errText}`));
+    return;
+  }
+
+  if (!response.body) {
+    onError(new Error("LLM stream: response body is null"));
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Keep the last (potentially incomplete) line in the buffer
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+        if (!trimmed.startsWith("data: ")) continue;
+
+        try {
+          const json = JSON.parse(trimmed.slice(6));
+          const delta = json?.choices?.[0]?.delta;
+          if (delta?.content) {
+            onToken(delta.content);
+          }
+        } catch {
+          // Ignore malformed SSE chunks
+        }
+      }
+    }
+    onDone();
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      onDone(); // treat cancellation as clean completion
+    } else {
+      onError(new Error(`LLM stream read error: ${err?.message ?? err}`));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
@@ -279,8 +394,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  const model = resolveModel();
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,9 +412,16 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  const url = resolveApiUrl();
+  if (url.includes("forge.manus.im") && model.includes("gemini")) {
+    payload.max_tokens = 32768;
+    payload.thinking = {
+      "budget_tokens": 128
+    };
+  } else if (url.includes("generativelanguage.googleapis.com")) {
+    payload.max_tokens = 8192;
+  } else {
+    payload.max_tokens = 4096;
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -329,4 +452,37 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   return (await response.json()) as InvokeResult;
+}
+
+export async function invokeEmbeddings(input: string | string[]): Promise<number[][]> {
+  assertApiKey();
+  const url = resolveApiUrl().replace("/chat/completions", "/embeddings");
+  
+  const key = ENV.forgeApiKey;
+  let model = "text-embedding-3-small";
+  if (key && key.startsWith("AIzaSy")) {
+    model = "text-embedding-004";
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `LLM embeddings failed: ${response.status} ${response.statusText} – ${errorText}`
+    );
+  }
+
+  const result = await response.json();
+  return result.data.map((d: any) => d.embedding);
 }

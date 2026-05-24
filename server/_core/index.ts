@@ -10,6 +10,8 @@ import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerStorageProxy } from "./storageProxy";
 import { getSessionCookieOptions } from "./cookies";
 import { setupTerminalHandler } from "./terminalHandler";
+import { setupCopilotHandler } from "../copilot/copilotHandler";
+import { initMemory } from "../copilot/memory";
 import { appRouter } from "../routes";
 import { createContext } from "./context";
 // Load .env first, then override with .env.local when present.
@@ -199,6 +201,8 @@ registerLocalAuthRoutes(app);
 registerOAuthRoutes(app);
 registerGoogleAuthRoutes(app);
 setupTerminalHandler(server);
+setupCopilotHandler(server);
+initMemory().catch(console.error);
 
 // Webhook Receiver for n8n Telemetry
 app.post("/api/soar/telemetry", async (req, res) => {

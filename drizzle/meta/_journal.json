@@ -57,6 +57,13 @@
       "when": 1777506334937,
       "tag": "0007_cool_khan",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1779569362712,
+      "tag": "0008_slimy_magneto",
+      "breakpoints": true
     }
   ]
 }

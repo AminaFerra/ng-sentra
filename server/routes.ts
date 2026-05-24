@@ -47,18 +47,12 @@ async function logAction(ctx: any, action: string, target?: string, details?: st
   }
 }
 
+import { authRouter } from "./routers/auth";
+
 // ─── App Router ──────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
-
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
+  auth: authRouter,
 
   // ─── Components ────────────────────────────────────────────────────────────
   components: router({
@@ -477,6 +471,61 @@ export const appRouter = router({
 
   // ─── Security Assessment ───────────────────────────────────────────────────
   security: securityRouter,
+
+  // ─── SOC Copilot ───────────────────────────────────────────────────────────
+  copilot: router({
+    listSessions: analystProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(20) }))
+      .query(async ({ ctx, input }) => {
+        const { listCopilotSessions } = await import("./db");
+        return listCopilotSessions(ctx.user?.id, input.limit);
+      }),
+
+    getSession: analystProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .query(async ({ input }) => {
+        const { getCopilotSession } = await import("./db");
+        return getCopilotSession(input.sessionId);
+      }),
+
+    saveSession: analystProcedure
+      .input(z.object({
+        sessionId: z.string().max(64),
+        messages: z.string(),
+        snapshotSummary: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { saveCopilotSession } = await import("./db");
+        await saveCopilotSession({
+          sessionId: input.sessionId,
+          userId: ctx.user?.id,
+          userName: ctx.user?.name ?? ctx.user?.email ?? "Unknown",
+          userRole: ctx.user?.role ?? "Unknown",
+          messages: input.messages,
+          snapshotSummary: input.snapshotSummary,
+          title: input.title,
+        });
+        return { success: true };
+      }),
+
+    renameSession: analystProcedure
+      .input(z.object({ sessionId: z.string(), title: z.string() }))
+      .mutation(async ({ input }) => {
+        const { renameCopilotSession } = await import("./db");
+        await renameCopilotSession(input.sessionId, input.title);
+        return { success: true };
+      }),
+
+    deleteSession: adminProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { deleteCopilotSession } = await import("./db");
+        await deleteCopilotSession(input.sessionId);
+        await logAction(ctx, "DELETE_COPILOT_SESSION", `copilot:${input.sessionId}`);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

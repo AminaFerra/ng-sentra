@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Activity, AlertTriangle, Brain, ChevronRight, Globe, HardDrive,
-  LayoutDashboard, LogOut, Menu, Moon, Settings, Shield, Sun, Users, Zap, X, Target
+  LayoutDashboard, LogOut, Menu, Moon, Settings, Shield, Sun, Users, Zap, X, Target, Bot
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useTheme } from "../contexts/ThemeContext";
+import SOCCopilotPanel from "./SOCCopilotPanel";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/security", label: "Security Assessment", icon: Target },
   { href: "/ai-models", label: "AI Models Health", icon: Activity },
   { href: "/ai-feed", label: "AI Threat Feed", icon: Brain },
+  { href: "/copilot", label: "SOC Copilot", icon: Bot },
 ];
 
 const adminNavItems = [
@@ -88,10 +90,10 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
     <div className={`flex flex-col h-full ${mobile ? "" : ""}`}>
       {/* Logo */}
       <div className="flex items-center gap-2 px-3 py-4 border-b border-border">
-        <img
-          src="/manus-storage/ng-sentra-logo-hq_d96a9866.png"
-          alt="NG-SENTRA Logo"
-          className="w-10 h-10 object-contain flex-shrink-0"
+        <img 
+          src="/logo.png" 
+          alt="NG-SENTRA Logo" 
+          className="w-8 h-8 object-contain flex-shrink-0" 
         />
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold text-foreground tracking-widest leading-tight">NG-SENTRA</h1>
@@ -187,6 +189,9 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* SOC Copilot — persistent overlay available on all pages */}
+      <SOCCopilotPanel />
     </div>
   );
 }

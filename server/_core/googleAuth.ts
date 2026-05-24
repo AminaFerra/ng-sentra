@@ -13,6 +13,9 @@ import { sdk } from "./sdk";
  * via localhost, a Cloudflare Tunnel URL, or a custom domain.
  */
 function buildCallbackUrl(req: Request): string {
+  if (process.env.GOOGLE_CALLBACK_URL) {
+    return process.env.GOOGLE_CALLBACK_URL;
+  }
   // Trust Cloudflare / reverse-proxy headers for the real origin
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
@@ -70,7 +73,7 @@ export function registerGoogleAuthRoutes(app: Express) {
       scope: ["profile", "email"],
       session: false,
       callbackURL,
-    })(req, res, next);
+    } as any)(req, res, next);
   });
 
   // Step 2: Google redirects back here with code
@@ -80,7 +83,7 @@ export function registerGoogleAuthRoutes(app: Express) {
       session: false,
       failureRedirect: "/login?error=google_failed",
       callbackURL,
-    })(req, res, next);
+    } as any)(req, res, next);
   }, async (req: Request, res: Response) => {
     try {
       const user = req.user as { openId: string; name: string; email: string | null };

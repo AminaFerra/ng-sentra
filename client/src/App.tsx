@@ -19,6 +19,7 @@ import AdminSettings from "./pages/AdminSettings";
 import LoginPage from "./pages/LoginPage";
 import ConfigFileViewer from "./pages/ConfigFileViewer";
 import TerminalAccessPage from "./pages/TerminalAccessPage";
+import CopilotPage from "./pages/CopilotPage";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/admin/users" component={() => <SOCLayout><AdminUsers /></SOCLayout>} />
       <Route path="/admin/audit" component={() => <SOCLayout><AdminAudit /></SOCLayout>} />
       <Route path="/admin/settings" component={() => <SOCLayout><AdminSettings /></SOCLayout>} />
+      <Route path="/copilot" component={() => <SOCLayout><CopilotPage /></SOCLayout>} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

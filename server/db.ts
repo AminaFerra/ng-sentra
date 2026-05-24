@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, like, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import type { PoolOptions } from "mysql2";
-import { AiModel, AuditLog, Component, InsertAiModel, InsertAuditLog, InsertComponent, InsertSoarApproach, InsertUser, SoarApproach, SystemSetting, User, SshCredential, InsertSshCredential, WazuhSetting, InsertWazuhSetting, aiModels, auditLogs, components, soarApproaches, systemSettings, users, sshCredentials, wazuhSettings, soarTelemetry, InsertSoarTelemetry, SoarTelemetry } from "../drizzle/schema";
+import { AiModel, AuditLog, Component, InsertAiModel, InsertAuditLog, InsertComponent, InsertSoarApproach, InsertUser, SoarApproach, SystemSetting, User, SshCredential, InsertSshCredential, WazuhSetting, InsertWazuhSetting, aiModels, auditLogs, components, soarApproaches, systemSettings, users, sshCredentials, wazuhSettings, soarTelemetry, InsertSoarTelemetry, SoarTelemetry, copilotSessions, CopilotSession, InsertCopilotSession, authAuditLogs, AuthAuditLog, InsertAuthAuditLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -343,3 +343,60 @@ export async function getSoarTelemetryMetrics(): Promise<{ logs: any[] }> {
   return { logs };
 }
 
+// ─── Copilot Sessions ──────────────────────────────────────────────────────────
+
+export async function saveCopilotSession(data: InsertCopilotSession): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(copilotSessions)
+    .values(data)
+    .onDuplicateKeyUpdate({
+      set: { 
+        messages: data.messages, 
+        snapshotSummary: data.snapshotSummary, 
+        title: data.title,
+        updatedAt: new Date() 
+      },
+    });
+}
+
+export async function getCopilotSession(sessionId: string): Promise<CopilotSession | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(copilotSessions).where(eq(copilotSessions.sessionId, sessionId)).limit(1);
+  return result[0];
+}
+
+export async function listCopilotSessions(userId?: number, limit = 20): Promise<CopilotSession[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const where = userId ? eq(copilotSessions.userId, userId) : undefined;
+  // Exclude archived sessions if we want
+  // return db.select().from(copilotSessions).where(and(where, eq(copilotSessions.isArchived, false))).orderBy(desc(copilotSessions.updatedAt)).limit(limit);
+  return db.select().from(copilotSessions).where(where).orderBy(desc(copilotSessions.updatedAt)).limit(limit);
+}
+
+export async function deleteCopilotSession(sessionId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(copilotSessions).where(eq(copilotSessions.sessionId, sessionId));
+}
+
+export async function renameCopilotSession(sessionId: string, title: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(copilotSessions).set({ title, updatedAt: new Date() }).where(eq(copilotSessions.sessionId, sessionId));
+}
+
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
+export async function createAuthAuditLog(data: Omit<InsertAuthAuditLog, "id" | "timestamp">): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(authAuditLogs).values(data);
+}

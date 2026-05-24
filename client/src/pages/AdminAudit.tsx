@@ -16,7 +16,7 @@ const actionColors: Record<string, string> = {
   UPDATE_SOAR_APPROACH: "text-orange-400",
   UPDATE_AI_MODEL: "text-emerald-400",
   LOGIN: "text-green-400",
-  LOGOUT: "text-slate-400",
+  LOGOUT: "text-muted-foreground",
 };
 
 export default function AdminAudit() {
@@ -131,7 +131,7 @@ export default function AdminAudit() {
                   <span className={`text-[10px] font-mono px-1 rounded border ${
                     log.userRole === "Admin" || log.userRole === "admin" ? "text-red-400 bg-red-400/10 border-red-400/30" :
                     log.userRole === "Analyst" ? "text-cyan-400 bg-cyan-400/10 border-cyan-400/30" :
-                    "text-slate-400 bg-slate-400/10 border-slate-400/30"
+                    "text-muted-foreground bg-muted border-border"
                   }`}>{log.userRole ?? "—"}</span>
                 </div>
                 <div className={`col-span-3 font-mono truncate ${actionColors[log.action] ?? "text-muted-foreground"}`}>

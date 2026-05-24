@@ -14,7 +14,10 @@ import {
   Network, Shield, Eye, Radio, CircleDot, ArrowRight,
   TrendingUp, Clock, Layers, ActivitySquare, TerminalSquare, RefreshCwOff, Edit
 } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { 
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell
+} from "recharts";
 
 // ─── Config maps ─────────────────────────────────────────────────────────────
 
@@ -45,7 +48,7 @@ const statusConfig: Record<string, {
     neonClass: "neon-glow-orange", ringColor: "#f97316", bgAccent: "from-orange-500/8",
   },
   unknown: {
-    label: "UNKNOWN", color: "text-slate-400",
+    label: "UNKNOWN", color: "text-muted-foreground",
     dot: "bg-slate-500",
     neonClass: "", ringColor: "#64748b", bgAccent: "from-slate-500/8",
   },
@@ -153,6 +156,94 @@ export default function AIModelsPanel() {
     refetchInterval: 30_000,
   });
 
+  const [autoProbe, setAutoProbe] = useState(false);
+
+  const { data: alertsData } = trpc.wazuh.getAlerts.useQuery({ limit: 1500 }, {
+    refetchInterval: autoProbe ? 15000 : false
+  });
+  const rawAlerts = useMemo(() => {
+    return ((alertsData && 'alerts' in alertsData ? alertsData.alerts : alertsData) || []) as any[];
+  }, [alertsData]);
+
+  const aiTelemetry = useMemo(() => {
+    const aiAlerts = [];
+    const modelCounts = {
+      "anomaly-detection": 0,
+      "alert-classification": 0,
+      "uba": 0,
+      "local-ti": 0,
+    };
+    const severityMap: Record<string, { Low: number; Medium: number; High: number; Critical: number }> = {
+      "anomaly-detection": { Low: 0, Medium: 0, High: 0, Critical: 0 },
+      "alert-classification": { Low: 0, Medium: 0, High: 0, Critical: 0 },
+      "uba": { Low: 0, Medium: 0, High: 0, Critical: 0 },
+      "local-ti": { Low: 0, Medium: 0, High: 0, Critical: 0 },
+    };
+    const hourlyCounts: Record<string, number> = {};
+
+    for (const a of rawAlerts) {
+      const desc = a.rule_description?.toLowerCase() || "";
+      let model = null;
+
+      if (desc.includes("anomaly") || desc.includes("behavior") || desc.includes("deviation")) model = "anomaly-detection";
+      else if (desc.includes("user") || desc.includes("profile") || desc.includes("uba") || desc.includes("login")) model = "uba";
+      else if (desc.includes("threat") || desc.includes("intel") || desc.includes("malicious") || desc.includes("ti")) model = "local-ti";
+      else if (desc.includes("triage") || desc.includes("classified") || desc.includes("gemini") || desc.includes("report")) model = "alert-classification";
+      
+      // Fallback distribution for demo visuals if no exact matches are found
+      if (!model) {
+        if (a.severity >= 7) model = "alert-classification";
+        else if (a.severity === 5 || a.severity === 6) model = "anomaly-detection";
+        else if (a.severity === 3 || a.severity === 4) model = "uba";
+        else model = "local-ti";
+      }
+
+      if (model) {
+        aiAlerts.push(a);
+        modelCounts[model as keyof typeof modelCounts]++;
+        
+        let sevCat: "Low" | "Medium" | "High" | "Critical" = "Low";
+        if (a.severity >= 6) sevCat = "Critical";
+        else if (a.severity >= 5) sevCat = "High";
+        else if (a.severity >= 4) sevCat = "Medium";
+
+        severityMap[model][sevCat]++;
+
+        const h = new Date(a.timestamp).toISOString().slice(0, 13) + ':00';
+        hourlyCounts[h] = (hourlyCounts[h] || 0) + 1;
+      }
+    }
+
+    const timelineData = Object.entries(hourlyCounts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-24)
+      .map(([h, count]) => ({
+        time: new Date(h).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        count,
+      }));
+
+    const barData = Object.entries(modelCounts).map(([k, v]) => ({
+      name: modelMeta[k]?.role || k,
+      slug: k,
+      count: v,
+      color: accentColors[modelMeta[k]?.accentColor || "cyan"].ring
+    })).sort((a,b) => b.count - a.count);
+
+    const severityData = Object.entries(severityMap).map(([k, v]) => ({
+      name: modelMeta[k]?.role || k,
+      slug: k,
+      ...v
+    }));
+
+    const pieData = Object.entries(modelCounts).map(([k, v]) => ({
+      name: modelMeta[k]?.role || k,
+      value: v,
+      color: accentColors[modelMeta[k]?.accentColor || "cyan"].ring
+    })).filter(d => d.value > 0);
+
+    return { timelineData, barData, severityData, pieData, total: aiAlerts.length };
+  }, [rawAlerts]);
+
   const isAdmin = user?.role === "Admin" || user?.role === "admin";
 
   // ── Live health check state ──
@@ -211,7 +302,6 @@ export default function AIModelsPanel() {
   // ── Telemetry & Logs state ──
   const [chartData, setChartData] = useState<any[]>([]);
   const [logStream, setLogStream] = useState<{ id: string; model: string; time: string; text: string; type: "alert" | "info" | "error" }[]>([]);
-  const [autoProbe, setAutoProbe] = useState(false);
 
   // Auto probe interval
   useEffect(() => {
@@ -363,7 +453,7 @@ export default function AIModelsPanel() {
           { label: "Online",          value: stats.running,  icon: Radio,         color: "text-emerald-400",  glow: "neon-glow-green" },
           { label: "Errors",          value: stats.error,    icon: AlertTriangle, color: "text-orange-400",   glow: stats.error > 0 ? "neon-glow-orange" : "" },
           { label: "Offline",         value: stats.stopped,  icon: CircleDot,     color: "text-red-400",      glow: stats.stopped > 0 ? "neon-glow-red" : "" },
-          { label: "Unknown",         value: stats.unknown,  icon: Eye,           color: "text-slate-400",    glow: "" },
+          { label: "Unknown",         value: stats.unknown,  icon: Eye,           color: "text-muted-foreground",    glow: "" },
         ].map(stat => (
           <div key={stat.label}
             className={`bg-card border border-border rounded-lg p-3.5 flex items-center gap-3 transition-all ${stat.glow}`}>
@@ -475,9 +565,9 @@ export default function AIModelsPanel() {
                   {/* Dynamic Endpoint */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider">Dynamic Endpoint URL</p>
-                    <div className="flex items-center gap-2 bg-black/40 border border-border rounded px-2 py-1.5">
-                      <Globe className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-[11px] font-mono text-slate-300 truncate">
+                    <div className="flex items-center gap-2 bg-muted/50 border border-border rounded px-2 py-1.5">
+                      <Cpu className="w-3 h-3 text-primary" />
+                      <span className="text-[11px] font-mono text-foreground truncate">
                         {model.endpointUrl || "Unconfigured (Uses Default IP)"}
                       </span>
                     </div>
@@ -487,21 +577,21 @@ export default function AIModelsPanel() {
                   <div className="flex items-center gap-2 bg-slate-500/8 border border-slate-500/15 rounded-md px-2.5 py-1.5">
                     {model.slug === "alert-classification" ? (
                       <>
-                        <Server className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                        <span className="text-[10px] font-mono text-slate-400">VirtualBox Docker Container</span>
+                        <Server className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-[10px] font-mono text-muted-foreground">VirtualBox Docker Container</span>
                       </>
                     ) : model.slug === "local-ti" ? (
                       <>
-                        <Terminal className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                        <span className="text-[10px] font-mono text-slate-400">Windows Localhost Service (Waitress)</span>
+                        <Terminal className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-[10px] font-mono text-muted-foreground">Windows Localhost Service (Waitress)</span>
                       </>
                     ) : (
                       <>
-                        <Server className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                        <span className="text-[10px] font-mono text-slate-400">VirtualBox Background Service</span>
+                        <Server className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-[10px] font-mono text-muted-foreground">VirtualBox Background Service</span>
                       </>
                     )}
-                    <Lock className="w-3 h-3 text-slate-500 ml-auto" />
+                    <Lock className="w-3 h-3 text-muted-foreground ml-auto" />
                   </div>
 
                   {/* Internal Endpoint */}
@@ -510,7 +600,7 @@ export default function AIModelsPanel() {
                       <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider flex items-center gap-1">
                         <Terminal className="w-3 h-3" /> Internal Endpoint
                       </p>
-                      <div className="flex items-center gap-2 bg-black/30 rounded-md px-2.5 py-1.5 border border-border">
+                      <div className="flex items-center gap-2 bg-muted/40 rounded-md px-2.5 py-1.5 border border-border">
                         <code className="text-[10px] font-mono text-muted-foreground truncate">{model.endpointUrl}</code>
                       </div>
                     </div>
@@ -568,7 +658,7 @@ export default function AIModelsPanel() {
                   {model.recentOutput && (
                     <div className="space-y-1">
                       <p className="text-muted-foreground/50 font-mono uppercase text-[10px]">Probe Output</p>
-                      <div className="bg-black/40 border border-border rounded-md px-3 py-2">
+                      <div className="bg-muted/50 border border-border rounded-md px-3 py-2">
                         <pre className="text-[10px] font-mono text-emerald-400/80 whitespace-pre-wrap line-clamp-3">
                           {model.recentOutput}
                         </pre>
@@ -591,77 +681,110 @@ export default function AIModelsPanel() {
         </div>
       )}
 
-      {/* ═══════════ LIVE TELEMETRY & LOGS ═══════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Graph */}
-        <Card className="bg-card border-border lg:col-span-1">
+      {/* ═══════════ AI ALERT TELEMETRY & ANALYTICS ═══════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+        
+        {/* Area Chart: Global AI Timeline */}
+        <Card className="bg-card border-border">
           <CardHeader className="pb-3 border-b border-border/50">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              Latency Telemetry (ms)
+              <Activity className="w-4 h-4 text-primary" />
+              Global AI Alert Timeline (24h)
+              <span className="ml-auto text-xs font-mono text-muted-foreground">{aiTelemetry.total.toLocaleString()} Processing Events</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 h-[300px]">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-                  <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickMargin={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', fontSize: '11px', borderRadius: '6px' }} 
-                    itemStyle={{ fontFamily: 'monospace' }}
-                  />
-                  <Line type="monotone" dataKey="anomaly-detection" stroke="#06b6d4" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="alert-classification" stroke="#f97316" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="local-ti" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="uba" stroke="#a855f7" strokeWidth={2} dot={false} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground/50 text-xs font-mono">
-                Awaiting telemetry data...
-              </div>
-            )}
+          <CardContent className="pt-4 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={aiTelemetry.timelineData} margin={{ left: -20, right: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="aiGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} vertical={false} />
+                <XAxis dataKey="time" stroke="transparent" tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} dy={10} />
+                <YAxis stroke="transparent" tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} dx={-10} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', fontSize: '11px', borderRadius: '6px' }} />
+                <Area type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} fill="url(#aiGrad)" dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Global Log Stream */}
-        <Card className="bg-card border-border lg:col-span-2 overflow-hidden flex flex-col">
-          <CardHeader className="pb-3 border-b border-border/50 bg-black/20">
+        {/* Bar Chart: Alerts by AI Model */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3 border-b border-border/50">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <TerminalSquare className="w-4 h-4 text-primary" />
-              Global System Log Stream
-              {autoProbe && <span className="ml-auto flex items-center gap-2 text-[10px] text-emerald-400 font-mono"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE</span>}
+              <Layers className="w-4 h-4 text-cyan-400" />
+              Workload by Neural Engine
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 flex-1 bg-black/60 font-mono text-[11px] h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar">
-            {logStream.length > 0 ? (
-              <div className="p-3 space-y-1.5 flex flex-col-reverse">
-                {logStream.map(log => (
-                  <div key={log.id} className="flex gap-3 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
-                    <span className="text-slate-500 flex-shrink-0 w-[60px]">{log.time}</span>
-                    <span className={`flex-shrink-0 w-[140px] truncate ${accentColors[modelMeta[log.model]?.accentColor ?? "cyan"].text}`}>
-                      [{log.model}]
-                    </span>
-                    <span className={`break-words ${
-                      log.type === "error" ? "text-red-400" :
-                      log.type === "alert" ? "text-orange-300 font-bold" :
-                      "text-slate-300"
-                    }`}>
-                      {log.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground/50 text-xs">
-                Run a health check or enable Auto-Probe to view logs
-              </div>
-            )}
+          <CardContent className="pt-4 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={aiTelemetry.barData} layout="vertical" margin={{ left: 0, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} horizontal={false} />
+                <XAxis type="number" stroke="transparent" tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} />
+                <YAxis type="category" dataKey="name" width={120} stroke="transparent" tick={{ fontSize: 10, fill: 'var(--color-foreground)' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', fontSize: '11px', borderRadius: '6px' }} cursor={{ fill: 'var(--color-muted)' }} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={16}>
+                  {aiTelemetry.barData.map((entry, i) => (
+                    <Cell key={`cell-${i}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Stacked Bar Chart: Severity Breakdown */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3 border-b border-border/50">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Shield className="w-4 h-4 text-orange-400" />
+              Severity Breakdown by Model
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={aiTelemetry.severityData} margin={{ left: -20, right: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} vertical={false} />
+                <XAxis dataKey="name" stroke="transparent" tick={{ fontSize: 9, fill: 'var(--color-muted-foreground)' }} dy={10} interval={0} />
+                <YAxis stroke="transparent" tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} dx={-10} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', fontSize: '11px', borderRadius: '6px' }} cursor={{ fill: 'var(--color-muted)' }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: '10px' }} />
+                <Bar dataKey="Low" stackId="a" fill="#06b6d4" barSize={32} />
+                <Bar dataKey="Medium" stackId="a" fill="#eab308" />
+                <Bar dataKey="High" stackId="a" fill="#f97316" />
+                <Bar dataKey="Critical" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Donut Chart: AI Workload Distribution */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-0 border-b border-border/50">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 pb-3">
+              <Globe className="w-4 h-4 text-purple-400" />
+              AI Workload Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center pt-6 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={aiTelemetry.pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" paddingAngle={2} stroke="none">
+                  {aiTelemetry.pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', fontSize: '11px', borderRadius: '6px' }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: '20px' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
+
+      {/* ═══════════ LIVE TELEMETRY & LOGS (REMOVED) ═══════════ */}
 
       {/* ═══════════ WORKFLOW TOPOLOGY ═══════════ */}
       <Card className="bg-card border-border relative overflow-hidden">

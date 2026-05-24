@@ -1,12 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Brain, ArrowRight, QrCode, Mail, Lock } from "lucide-react";
+import { Shield, Brain, ArrowRight, QrCode, Mail, Lock, ShieldAlert, BrainCircuit, Radar, Network, Activity, Server, Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { getLoginUrl } from "@/const";
+import { getLoginUrl, getOAuthLoginUrl } from "@/const";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import WorldMap from "@/components/WorldMap";
 
 export default function LoginPage() {
   const { isAuthenticated, loading, refresh } = useAuth();
@@ -114,192 +116,340 @@ export default function LoginPage() {
     challenge2faMutation.mutate({ tempToken, code: verificationCode });
   };
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{ backgroundImage: `linear-gradient(rgba(0,200,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(0,200,255,0.8) 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+    exit: { opacity: 0, x: -10, transition: { duration: 0.2 } }
+  };
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-8 space-y-4">
-          <div className="flex justify-center mb-6 mt-4">
-            <img src="/logo.png" alt="NG-SENTRA Logo" className="w-auto h-80 object-contain drop-shadow-[0_0_20px_rgba(0,200,255,0.25)] hover:scale-105 transition-transform duration-500" />
-          </div>
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 30 } }
+  };
+
+  return (
+    <div className="h-screen bg-[#020617] flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+
+      {/* Subtle Cyber Grid */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{ backgroundImage: `linear-gradient(rgba(0,200,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,200,255,1) 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
+
+      {/* Corner Brackets */}
+      <div className="absolute top-8 left-8 w-8 h-8 border-t border-l border-cyan-500/30 opacity-50 pointer-events-none" />
+      <div className="absolute top-8 right-8 w-8 h-8 border-t border-r border-cyan-500/30 opacity-50 pointer-events-none" />
+      <div className="absolute bottom-8 left-8 w-8 h-8 border-b border-l border-cyan-500/30 opacity-50 pointer-events-none" />
+      <div className="absolute bottom-8 right-8 w-8 h-8 border-b border-r border-cyan-500/30 opacity-50 pointer-events-none" />
+
+      {/* Faint Binary Data */}
+      <div className="absolute top-16 left-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest hidden lg:block">
+        01001110 01000111 01010011 <br />
+        01000101 01001110 01010100<br /> 01010010 01000001
+      </div>
+      <div className="absolute bottom-32 right-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest text-right hidden lg:block">
+        110 101 011 010110<br />
+        101 01011 01 110 101
+      </div>
+
+      {/* Background Tech Elements (Static/Faint) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 hidden md:block">
+        {/* Prominent Dotted World Map */}
+        <div className="absolute top-[5%] right-[-5%] w-[1000px] h-[800px] pointer-events-none opacity-80">
+          <WorldMap />
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-8 shadow-2xl shadow-black/40 space-y-6">
-          
+        {/* Center-left Lock & Circuits */}
+        <div className="absolute top-[35%] left-[25%] opacity-20 text-cyan-500 flex items-center justify-center">
+          <div className="absolute w-32 h-32 rounded-full border border-cyan-500/30" />
+          <div className="absolute w-48 h-48 rounded-full border border-cyan-500/20 border-dashed" />
+          <Lock className="w-8 h-8" />
+          <div className="absolute w-32 h-[1px] bg-cyan-500/40 right-full top-1/2" />
+        </div>
+
+        {/* Bottom-left Shield */}
+        <div className="absolute bottom-[20%] left-[20%] opacity-20 text-cyan-500 flex items-center justify-center">
+          <div className="absolute w-24 h-24 rounded-full border border-cyan-500/30" />
+          <Shield className="w-10 h-10" />
+          <div className="absolute w-[1px] h-24 bg-cyan-500/40 bottom-full left-1/2" />
+        </div>
+
+        {/* Center-left Fingerprint */}
+        <div className="absolute top-[50%] left-[15%] opacity-20 text-cyan-500 flex items-center justify-center">
+          <div className="absolute w-16 h-16 border border-cyan-500/30 rounded-sm" />
+          <div className="absolute w-20 h-20 border border-cyan-500/20 rounded-sm rotate-45" />
+          <Activity className="w-8 h-8" />
+        </div>
+      </div>
+
+      {/* Ambient Glowing Orbs */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Floating Glowing Icons (Animated) */}
+      <div className="absolute inset-0 perspective-[1000px] pointer-events-none flex items-center justify-center overflow-hidden z-10">
+        {/* Top-Left Brain */}
+        <motion.div
+          animate={{ y: [-15, 15, -15] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[25%] left-[15%] p-4 rounded-xl bg-[#020617]/50 border border-cyan-500/30 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)]"
+        >
+          <BrainCircuit className="w-8 h-8 text-cyan-400" />
+        </motion.div>
+
+        {/* Top-Right Radar */}
+        <motion.div
+          animate={{ y: [15, -15, 15] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute top-[20%] right-[20%] w-20 h-20 rounded-full bg-[#020617]/50 border border-cyan-500/40 border-dashed backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] flex items-center justify-center"
+        >
+          <Radar className="w-8 h-8 text-cyan-400" />
+        </motion.div>
+
+        {/* Bottom-Right Shield */}
+        <motion.div
+          animate={{ y: [-12, 12, -12] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute bottom-[30%] right-[25%] w-20 h-20 rounded-full bg-[#020617]/50 border border-cyan-500/40 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] flex items-center justify-center"
+        >
+          <ShieldAlert className="w-8 h-8 text-cyan-400" />
+        </motion.div>
+      </div>
+
+      {/* Bottom Footer Text */}
+      <div className="absolute bottom-4 left-0 w-full flex justify-center text-[9px] sm:text-[10px] font-mono text-muted-foreground/30 z-10 pointer-events-none tracking-widest uppercase">
+        NG-SENTRA © 2026 - AUTHORIZED ACCESS ONLY
+      </div>
+
+      {/* Top Content (Logo) */}
+      <div className="relative z-20 flex flex-col items-center text-center max-w-2xl -mb-6 -mt-16 shrink-0">
+        <motion.div
+          animate={{
+            y: [-10, 10, -10],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <img
+            src="/logo.png"
+            alt="NG-SENTRA Logo"
+            className="w-72 sm:w-[400px] drop-shadow-[0_0_40px_rgba(0,255,255,0.5)]"
+          />
+        </motion.div>
+      </div>
+
+      {/* Login Card */}
+      <div className="relative z-20 w-full max-w-[400px] bg-[#020617]/80 backdrop-blur-md border border-white/5 rounded-2xl p-8 shadow-2xl">
+        <AnimatePresence mode="wait">
           {view === "login" && (
-            <div className="space-y-4">
+            <motion.div key="login" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
+              <motion.div variants={itemVariants} className="mb-6 text-center">
+                <h2 className="text-[22px] font-semibold text-white tracking-wide">Secure Login</h2>
+                <p className="text-xs text-slate-400 mt-1">Authorized personnel only.</p>
+              </motion.div>
+
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold">Secure Login</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Authorized personnel only.</p>
-                </div>
-                <Input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required className="bg-background/50" />
-                <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="bg-background/50" />
-                <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? "Authenticating..." : "Login"}
-                </Button>
-                <div className="text-center mt-4">
-                  <Button type="button" variant="link" size="sm" onClick={() => setView("register")} className="text-xs text-muted-foreground">
+                <motion.div variants={itemVariants}>
+                  <Input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" />
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" />
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="pt-2">
+                  <Button type="submit" className="w-full h-11 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-medium tracking-wide flex items-center justify-center gap-2" disabled={loginMutation.isPending}>
+                    {loginMutation.isPending ? "Authenticating..." : <>Login <ArrowRight className="w-4 h-4" /></>}
+                  </Button>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="text-center pt-1">
+                  <Button type="button" variant="link" size="sm" onClick={() => setView("register")} className="text-xs text-slate-500 hover:text-cyan-400 transition-colors">
                     Need an account? Register
                   </Button>
-                </div>
+                </motion.div>
               </form>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">
-                  OR
-                </span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {/* Google OAuth Button */}
               {googleAuthEnabled && (
-                <a
-                  href="/api/auth/google"
-                  className="w-full h-11 flex items-center justify-center gap-3 rounded-md border border-border bg-white/5 hover:bg-white/10 transition-colors text-sm font-semibold text-foreground"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  Continue with Google
-                </a>
+                <motion.div variants={itemVariants}>
+                  <div className="relative my-5">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                    <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-[#020617] px-3 text-slate-500">OR</span></div>
+                  </div>
+                  <Button type="button" variant="outline" className="w-full h-11 bg-transparent border-white/10 hover:bg-white/5 transition-colors font-normal text-sm text-slate-300" onClick={() => window.location.href = getOAuthLoginUrl()}>
+                    <svg className="w-4 h-4 mr-3" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
+                    Continue with Google
+                  </Button>
+                </motion.div>
               )}
 
-              {/* Local Auth Button */}
               {localAuthEnabled && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 font-semibold text-sm gap-2"
-                  onClick={() => (window.location.href = getLoginUrl())}
-                >
-                  <Shield className="w-4 h-4" />
-                  Sign In Locally (Dev Mode)
-                </Button>
+                <motion.div variants={itemVariants} className="pt-1">
+                  <Button type="button" variant="ghost" className="w-full h-11 font-normal text-xs text-slate-400 hover:text-white hover:bg-white/5 gap-2" onClick={() => (window.location.href = getLoginUrl())}>
+                    <Shield className="w-3.5 h-3.5" /> Sign In Locally (Dev Mode)
+                  </Button>
+                </motion.div>
               )}
-
-              {/* Manus OAuth fallback if neither local nor google */}
-              {!localAuthEnabled && !googleAuthEnabled && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 font-semibold text-sm gap-2"
-                  onClick={() => (window.location.href = getLoginUrl())}
-                >
-                  <Shield className="w-4 h-4" />
-                  Sign In to NG-SENTRA
-                </Button>
-              )}
-            </div>
+            </motion.div>
           )}
 
           {view === "register" && (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold">Create Account</h2>
-                <p className="text-sm text-muted-foreground mt-1">Request SOC access.</p>
-              </div>
-              <Input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className="bg-background/50" />
-              <Input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required className="bg-background/50" />
-              <Input type="password" placeholder="Password (min 8 chars)" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} className="bg-background/50" />
-              <Input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} className="bg-background/50" />
-              <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                {registerMutation.isPending ? "Registering..." : "Create Account"}
-              </Button>
-              <div className="text-center mt-4">
-                <Button variant="link" size="sm" onClick={() => setView("login")} className="text-xs text-muted-foreground">
-                  Already have an account? Login
-                </Button>
-              </div>
-            </form>
+            <motion.div key="register" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
+              <motion.div variants={itemVariants} className="mb-6 text-center">
+                <h2 className="text-[22px] font-semibold text-white tracking-wide">Request Access</h2>
+                <p className="text-xs text-slate-400 mt-1">Submit your details for SOC clearance.</p>
+              </motion.div>
+
+              <form onSubmit={handleRegister} className="space-y-4">
+                {!localAuthEnabled && (
+                  <motion.div variants={itemVariants} className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-md mb-4 flex items-start gap-2">
+                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>Local authentication is disabled by administrator. Please use Google SSO.</span>
+                  </motion.div>
+                )}
+
+                <motion.div variants={itemVariants}>
+                  <Input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" disabled={!localAuthEnabled} />
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <Input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" disabled={!localAuthEnabled} />
+                </motion.div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <motion.div variants={itemVariants}>
+                    <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" disabled={!localAuthEnabled} />
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Input type="password" placeholder="Confirm" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="h-11 bg-[#0f172a] border-white/5 text-white placeholder:text-slate-500 transition-all focus:border-cyan-500/50" disabled={!localAuthEnabled} />
+                  </motion.div>
+                </div>
+
+                <motion.div variants={itemVariants} className="pt-4">
+                  <Button type="submit" className="w-full h-11 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-medium tracking-wide" disabled={!localAuthEnabled || registerMutation.isPending}>
+                    {registerMutation.isPending ? "Processing..." : "Submit Application"}
+                  </Button>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="text-center pt-2">
+                  <Button type="button" variant="link" size="sm" onClick={() => setView("login")} className="text-xs text-slate-500 hover:text-cyan-400 transition-colors">
+                    Back to Login
+                  </Button>
+                </motion.div>
+              </form>
+            </motion.div>
           )}
 
           {view === "verifyEmail" && (
-            <form onSubmit={handleVerifyEmail} className="space-y-4">
-              <div className="text-center mb-6">
-                <Mail className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h2 className="text-xl font-semibold">Verify Email</h2>
-                <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to {email}.<br/><span className="text-[10px]">(Check your server terminal for Ethereal email preview links)</span></p>
-              </div>
-              <Input type="text" placeholder="6-digit code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required className="bg-background/50 text-center tracking-widest font-mono text-lg" maxLength={6} />
-              <Button type="submit" className="w-full" disabled={verifyEmailMutation.isPending}>
-                Verify Code
-              </Button>
-            </form>
+            <motion.div key="verifyEmail" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
+              <motion.div variants={itemVariants} className="text-center mb-6">
+                <motion.div animate={{ rotateY: [0, 360] }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="inline-block mb-4">
+                  <div className="w-14 h-14 bg-cyan-500/10 rounded-full flex items-center justify-center border border-cyan-500/20">
+                    <Mail className="w-6 h-6 text-cyan-400" />
+                  </div>
+                </motion.div>
+                <h2 className="text-[22px] font-semibold text-white tracking-wide">Verify Email</h2>
+                <p className="text-xs text-slate-400 mt-2">Enter the 6-digit code sent to <span className="text-white font-medium">{email}</span></p>
+                <p className="text-[10px] text-slate-600 mt-1 font-mono">(Check server terminal for Ethereal links)</p>
+              </motion.div>
+
+              <form onSubmit={handleVerifyEmail} className="space-y-6">
+                <motion.div variants={itemVariants}>
+                  <Input type="text" placeholder="000000" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required className="h-14 bg-[#0f172a] border-white/5 text-white text-center tracking-[0.5em] font-mono text-2xl transition-all focus:border-cyan-500/50" maxLength={6} />
+                </motion.div>
+                <motion.div variants={itemVariants}>
+                  <Button type="submit" className="w-full h-11 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-medium tracking-wide" disabled={verifyEmailMutation.isPending}>
+                    Verify Code
+                  </Button>
+                </motion.div>
+              </form>
+            </motion.div>
           )}
 
           {view === "setup2fa" && (
-            <div className="space-y-4">
-              <div className="text-center mb-6">
-                <Shield className="w-8 h-8 text-cyan-500 mx-auto mb-2" />
-                <h2 className="text-xl font-semibold">Mandatory 2FA Setup</h2>
-                <p className="text-sm text-muted-foreground mt-1">You must configure two-factor authentication to access the SOC.</p>
-              </div>
-              
+            <motion.div key="setup2fa" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
+              <motion.div variants={itemVariants} className="text-center mb-6">
+                <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }} className="inline-block mb-4">
+                  <div className="w-14 h-14 bg-cyan-500/10 rounded-full flex items-center justify-center border border-cyan-500/20">
+                    <Shield className="w-6 h-6 text-cyan-400" />
+                  </div>
+                </motion.div>
+                <h2 className="text-[22px] font-semibold text-white tracking-wide">Mandatory 2FA Setup</h2>
+                <p className="text-xs text-slate-400 mt-2">Configure two-factor authentication to secure your account.</p>
+              </motion.div>
+
               {!qrCodeUrl ? (
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start h-14" onClick={() => handleSetup2fa("totp")} disabled={setup2faMutation.isPending}>
-                    <QrCode className="w-5 h-5 mr-3" />
-                    <div className="text-left">
-                      <div className="font-semibold">Authenticator App</div>
-                      <div className="text-xs text-muted-foreground">Google Auth, Authy, etc.</div>
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start h-14" onClick={() => handleSetup2fa("email")} disabled={setup2faMutation.isPending}>
-                    <Mail className="w-5 h-5 mr-3" />
-                    <div className="text-left">
-                      <div className="font-semibold">Email OTP</div>
-                      <div className="text-xs text-muted-foreground">Codes sent to {email}</div>
-                    </div>
-                  </Button>
+                <div className="space-y-4">
+                  <motion.div variants={itemVariants}>
+                    <Button variant="outline" className="w-full justify-start h-auto p-4 bg-[#0f172a] hover:bg-white/5 border-white/5 hover:border-cyan-500/50 transition-all" onClick={() => handleSetup2fa("totp")} disabled={setup2faMutation.isPending}>
+                      <QrCode className="w-6 h-6 mr-4 text-cyan-400 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-medium text-sm text-white">Authenticator App</div>
+                        <div className="text-[11px] text-slate-400 mt-1 whitespace-normal">Use Google Authenticator, Authy, or similar applications.</div>
+                      </div>
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Button variant="outline" className="w-full justify-start h-auto p-4 bg-[#0f172a] hover:bg-white/5 border-white/5 hover:border-cyan-500/50 transition-all" onClick={() => handleSetup2fa("email")} disabled={setup2faMutation.isPending}>
+                      <Mail className="w-6 h-6 mr-4 text-slate-300 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-medium text-sm text-white">Email Verification</div>
+                        <div className="text-[11px] text-slate-400 mt-1 whitespace-normal">Receive one-time codes via your registered email address.</div>
+                      </div>
+                    </Button>
+                  </motion.div>
                 </div>
               ) : (
-                <form onSubmit={handleChallenge} className="space-y-4">
-                  <div className="flex justify-center p-4 bg-white rounded-lg">
-                    <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
-                  </div>
-                  <p className="text-xs text-center text-muted-foreground font-mono bg-muted/50 p-2 rounded">
-                    Secret: {setupSecret}
-                  </p>
-                  <Input type="text" placeholder="Enter Authenticator Code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required className="bg-background/50 text-center tracking-widest font-mono text-lg" maxLength={6} />
-                  <Button type="submit" className="w-full" disabled={challenge2faMutation.isPending}>
-                    Verify & Complete Setup
-                  </Button>
+                <form onSubmit={handleChallenge} className="space-y-6">
+                  <motion.div variants={itemVariants} className="flex flex-col items-center p-6 bg-[#0f172a] border border-white/5 rounded-xl">
+                    <div className="bg-white p-3 rounded-lg mb-4">
+                      <img src={qrCodeUrl} alt="QR Code" className="w-40 h-40" />
+                    </div>
+                    <div className="text-center w-full">
+                      <span className="text-[10px] uppercase text-slate-500 tracking-wider mb-1 block">Manual Entry Secret</span>
+                      <p className="text-xs text-white font-mono bg-black/30 p-2 rounded border border-white/10">
+                        {setupSecret}
+                      </p>
+                    </div>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Input type="text" placeholder="6-Digit Code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required className="h-14 bg-[#0f172a] border-white/5 text-white text-center tracking-[0.5em] font-mono text-2xl transition-all focus:border-cyan-500/50" maxLength={6} />
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Button type="submit" className="w-full h-11 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-medium tracking-wide" disabled={challenge2faMutation.isPending}>
+                      Verify & Complete Setup
+                    </Button>
+                  </motion.div>
                 </form>
               )}
-            </div>
+            </motion.div>
           )}
 
           {view === "challenge2fa" && (
-            <form onSubmit={handleChallenge} className="space-y-4">
-              <div className="text-center mb-6">
-                <Lock className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h2 className="text-xl font-semibold">Two-Factor Authentication</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {twoFactorType === "totp" ? "Enter the code from your authenticator app." : `Enter the code sent to your email. (Check terminal for Ethereal links)`}
+            <motion.div key="challenge2fa" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
+              <motion.div variants={itemVariants} className="text-center mb-6">
+                <motion.div animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }} className="inline-block mb-4">
+                  <div className="w-14 h-14 bg-cyan-500/10 rounded-full flex items-center justify-center border border-cyan-500/20">
+                    <Lock className="w-6 h-6 text-cyan-400" />
+                  </div>
+                </motion.div>
+                <h2 className="text-[22px] font-semibold text-white tracking-wide">Two-Factor Auth</h2>
+                <p className="text-xs text-slate-400 mt-2">
+                  {twoFactorType === "totp" ? "Enter the 6-digit code from your authenticator app." : `Enter the verification code sent to your email.`}
                 </p>
-              </div>
-              <Input type="text" placeholder="6-digit code" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required className="bg-background/50 text-center tracking-widest font-mono text-lg" maxLength={6} />
-              <Button type="submit" className="w-full" disabled={challenge2faMutation.isPending}>
-                Authenticate
-              </Button>
-            </form>
+              </motion.div>
+
+              <form onSubmit={handleChallenge} className="space-y-6">
+                <motion.div variants={itemVariants}>
+                  <Input type="text" placeholder="000000" value={verificationCode} onChange={e => setVerificationCode(e.target.value)} required autoFocus className="h-14 bg-[#0f172a] border-white/5 text-white text-center tracking-[0.5em] font-mono text-2xl transition-all focus:border-cyan-500/50" maxLength={6} />
+                </motion.div>
+                <motion.div variants={itemVariants}>
+                  <Button type="submit" className="w-full h-11 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-medium tracking-wide flex items-center justify-center gap-2" disabled={challenge2faMutation.isPending}>
+                    {challenge2faMutation.isPending ? "Verifying..." : <>Authenticate <Lock className="w-4 h-4" /></>}
+                  </Button>
+                </motion.div>
+              </form>
+            </motion.div>
           )}
-
-        </div>
-
-        <p className="text-center text-[10px] text-muted-foreground/40 font-mono mt-6 tracking-wider">
-          NG-SENTRA © 2026 — AUTHORIZED ACCESS ONLY
-        </p>
+        </AnimatePresence>
       </div>
     </div>
   );

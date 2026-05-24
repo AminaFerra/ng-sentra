@@ -32,8 +32,8 @@ const roleBadgeVariant: Record<string, string> = {
   Admin: "bg-red-500/20 text-red-400 border-red-500/30",
   admin: "bg-red-500/20 text-red-400 border-red-500/30",
   Analyst: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  Viewer: "bg-slate-500/20 text-slate-400 border-slate-500/30",
-  user: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+  Viewer: "bg-muted text-muted-foreground border-border",
+  user: "bg-muted text-muted-foreground border-border",
 };
 
 function NavLink({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
@@ -89,18 +89,14 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={`flex flex-col h-full ${mobile ? "" : ""}`}>
       {/* Logo */}
-      <div className="flex items-center gap-2 px-3 py-4 border-b border-border">
+      <div className="flex flex-col items-center justify-center py-2 px-0 border-b border-border bg-gradient-to-b from-muted/30 to-transparent relative overflow-hidden">
         <img 
           src="/logo.png" 
           alt="NG-SENTRA Logo" 
-          className="w-8 h-8 object-contain flex-shrink-0" 
+          className="w-full scale-110 h-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-300" 
         />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-bold text-foreground tracking-widest leading-tight">NG-SENTRA</h1>
-          <p className="text-[10px] text-muted-foreground font-mono tracking-wider">SOC DASHBOARD</p>
-        </div>
         {mobile && (
-          <button onClick={() => setSidebarOpen(false)} className="ml-auto text-muted-foreground hover:text-foreground">
+          <button onClick={() => setSidebarOpen(false)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground bg-background/50 rounded p-1 z-10">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -149,7 +145,7 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <aside className="relative flex flex-col w-56 bg-sidebar border-r border-sidebar-border z-50">
             <Sidebar mobile />
           </aside>

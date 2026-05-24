@@ -13,8 +13,8 @@ const roleBadge: Record<string, string> = {
   Admin: "bg-red-500/20 text-red-400 border-red-500/30",
   admin: "bg-red-500/20 text-red-400 border-red-500/30",
   Analyst: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  Viewer: "bg-slate-500/20 text-slate-400 border-slate-500/30",
-  user: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+  Viewer: "bg-muted text-muted-foreground border-border",
+  user: "bg-muted text-muted-foreground border-border",
 };
 
 export default function AdminUsers() {

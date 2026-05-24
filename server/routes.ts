@@ -447,7 +447,7 @@ export const appRouter = router({
       }),
 
     getAlerts: protectedProcedure
-      .input(z.object({ limit: z.number().default(50) }))
+      .input(z.object({ limit: z.number().max(5000).default(200) }))
       .query(async ({ input }) => {
         try {
           const { fetchWazuhAlerts } = await import("./wazuh-service");
@@ -457,6 +457,37 @@ export const appRouter = router({
           return { success: false, error: error.message, alerts: [] };
         }
       }),
+
+    updateIndex: adminProcedure
+      .input(z.object({ indexPattern: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const settings = await getWazuhSettings();
+        if (!settings) throw new TRPCError({ code: "NOT_FOUND", message: "Wazuh not configured" });
+        await upsertWazuhSettings({ ...settings, alertIndexPattern: input.indexPattern });
+        await logAction(ctx, "UPDATE_WAZUH_INDEX", "wazuh:index", input.indexPattern);
+        return { success: true, indexPattern: input.indexPattern };
+      }),
+
+    getStats: protectedProcedure.query(async () => {
+      try {
+        const { fetchWazuhAlerts } = await import("./wazuh-service");
+        const alerts = await fetchWazuhAlerts(500);
+        const severityCount: Record<number, number> = {};
+        const agentCount: Record<string, number> = {};
+        const ruleCount: Record<string, { count: number; description: string }> = {};
+        alerts.forEach((a: any) => {
+          severityCount[a.severity] = (severityCount[a.severity] || 0) + 1;
+          agentCount[a.agent_name] = (agentCount[a.agent_name] || 0) + 1;
+          if (!ruleCount[a.rule_id]) ruleCount[a.rule_id] = { count: 0, description: a.rule_description };
+          ruleCount[a.rule_id].count++;
+        });
+        const topAgents = Object.entries(agentCount).sort(([,a],[,b]) => b-a).slice(0,10).map(([name,count]) => ({ name, count }));
+        const topRules = Object.entries(ruleCount).sort(([,a],[,b]) => b.count-a.count).slice(0,10).map(([id,{count,description}]) => ({ id, count, description }));
+        return { success: true, total: alerts.length, severityCount, topAgents, topRules };
+      } catch (error: any) {
+        return { success: false, error: error.message, total: 0, severityCount: {}, topAgents: [], topRules: [] };
+      }
+    }),
 
 
     testConnection: adminProcedure.query(async () => {

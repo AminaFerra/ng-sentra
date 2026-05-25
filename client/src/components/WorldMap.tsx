@@ -1,7 +1,7 @@
 import React from "react";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const geoUrl = "/countries-110m.json";
 
 export default function WorldMap() {
   return (
@@ -9,9 +9,9 @@ export default function WorldMap() {
       projection="geoMercator"
       projectionConfig={{
         scale: 140,
-        center: [0, 20]
+        center: [0, 30]
       }}
-      className="w-full h-full opacity-60"
+      className="w-full h-full"
     >
       <Geographies geography={geoUrl}>
         {({ geographies }) =>
@@ -19,26 +19,19 @@ export default function WorldMap() {
             <Geography
               key={geo.rsmKey}
               geography={geo}
-              fill="transparent"
-              stroke="url(#gradient)"
-              strokeWidth={1.5}
+              fill="rgba(6, 182, 212, 0.1)"
+              stroke="rgba(6, 182, 212, 0.6)"
+              strokeWidth={1}
               strokeDasharray="2,4"
-              strokeLinecap="round"
               style={{
                 default: { outline: "none" },
-                hover: { outline: "none" },
+                hover: { outline: "none", fill: "rgba(6, 182, 212, 0.3)" },
                 pressed: { outline: "none" },
               }}
             />
           ))
         }
       </Geographies>
-      <defs>
-        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#06b6d4" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-      </defs>
     </ComposableMap>
   );
 }

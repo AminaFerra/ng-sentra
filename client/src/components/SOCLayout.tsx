@@ -137,31 +137,15 @@ export default function SOCLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 bg-sidebar border-r border-sidebar-border fixed h-full z-30">
+      {/* Desktop Sidebar (Always Visible) */}
+      <aside className="flex flex-col w-56 bg-sidebar border-r border-sidebar-border fixed h-full z-30">
         <Sidebar />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative flex flex-col w-56 bg-sidebar border-r border-sidebar-border z-50">
-            <Sidebar mobile />
-          </aside>
-        </div>
-      )}
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-56 min-h-screen">
+      <div className="flex-1 flex flex-col ml-56 min-h-screen">
         {/* Top Header */}
         <header className="h-12 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-20">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-muted-foreground hover:text-foreground"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

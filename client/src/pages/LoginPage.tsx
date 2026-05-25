@@ -128,116 +128,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen bg-[#020617] flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-[100dvh] w-full bg-[#020617] flex flex-col relative overflow-x-hidden font-sans">
 
       {/* Subtle Cyber Grid */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+      <div className="fixed inset-0 opacity-[0.03] pointer-events-none z-0"
         style={{ backgroundImage: `linear-gradient(rgba(0,200,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,200,255,1) 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
 
       {/* Corner Brackets */}
-      <div className="absolute top-8 left-8 w-8 h-8 border-t border-l border-cyan-500/30 opacity-50 pointer-events-none" />
-      <div className="absolute top-8 right-8 w-8 h-8 border-t border-r border-cyan-500/30 opacity-50 pointer-events-none" />
-      <div className="absolute bottom-8 left-8 w-8 h-8 border-b border-l border-cyan-500/30 opacity-50 pointer-events-none" />
-      <div className="absolute bottom-8 right-8 w-8 h-8 border-b border-r border-cyan-500/30 opacity-50 pointer-events-none" />
+      <div className="fixed top-8 left-8 w-8 h-8 border-t border-l border-cyan-500/30 opacity-50 pointer-events-none z-0" />
+      <div className="fixed top-8 right-8 w-8 h-8 border-t border-r border-cyan-500/30 opacity-50 pointer-events-none z-0" />
+      <div className="fixed bottom-8 left-8 w-8 h-8 border-b border-l border-cyan-500/30 opacity-50 pointer-events-none z-0" />
+      <div className="fixed bottom-8 right-8 w-8 h-8 border-b border-r border-cyan-500/30 opacity-50 pointer-events-none z-0" />
 
       {/* Faint Binary Data */}
-      <div className="absolute top-16 left-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest hidden lg:block">
+      <div className="fixed top-16 left-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest hidden lg:block z-0">
         01001110 01000111 01010011 <br />
         01000101 01001110 01010100<br /> 01010010 01000001
       </div>
-      <div className="absolute bottom-32 right-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest text-right hidden lg:block">
+      <div className="fixed bottom-32 right-32 text-[10px] font-mono text-cyan-500/20 pointer-events-none leading-relaxed tracking-widest text-right hidden lg:block z-0">
         110 101 011 010110<br />
         101 01011 01 110 101
       </div>
 
       {/* Background Tech Elements (Static/Faint) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 hidden md:block">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {/* Prominent Dotted World Map */}
-        <div className="absolute top-[5%] right-[-5%] w-[1000px] h-[800px] pointer-events-none opacity-80">
+        <div className="absolute inset-0 flex items-center justify-center opacity-30">
           <WorldMap />
         </div>
 
-        {/* Center-left Lock & Circuits */}
-        <div className="absolute top-[35%] left-[25%] opacity-20 text-cyan-500 flex items-center justify-center">
-          <div className="absolute w-32 h-32 rounded-full border border-cyan-500/30" />
-          <div className="absolute w-48 h-48 rounded-full border border-cyan-500/20 border-dashed" />
-          <Lock className="w-8 h-8" />
-          <div className="absolute w-32 h-[1px] bg-cyan-500/40 right-full top-1/2" />
-        </div>
-
-        {/* Bottom-left Shield */}
-        <div className="absolute bottom-[20%] left-[20%] opacity-20 text-cyan-500 flex items-center justify-center">
-          <div className="absolute w-24 h-24 rounded-full border border-cyan-500/30" />
-          <Shield className="w-10 h-10" />
-          <div className="absolute w-[1px] h-24 bg-cyan-500/40 bottom-full left-1/2" />
-        </div>
-
-        {/* Center-left Fingerprint */}
-        <div className="absolute top-[50%] left-[15%] opacity-20 text-cyan-500 flex items-center justify-center">
-          <div className="absolute w-16 h-16 border border-cyan-500/30 rounded-sm" />
-          <div className="absolute w-20 h-20 border border-cyan-500/20 rounded-sm rotate-45" />
-          <Activity className="w-8 h-8" />
-        </div>
       </div>
 
       {/* Ambient Glowing Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed top-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
 
       {/* Floating Glowing Icons (Animated) */}
-      <div className="absolute inset-0 perspective-[1000px] pointer-events-none flex items-center justify-center overflow-hidden z-10">
+      <div className="fixed inset-0 perspective-[1000px] pointer-events-none flex items-center justify-center overflow-hidden z-10">
         {/* Top-Left Brain */}
         <motion.div
           animate={{ y: [-15, 15, -15] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[25%] left-[15%] p-4 rounded-xl bg-[#020617]/50 border border-cyan-500/30 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)]"
+          className="absolute top-[15%] md:top-[25%] left-[5%] md:left-[15%] p-4 rounded-xl bg-[#020617]/50 border border-cyan-500/30 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] hidden sm:block"
         >
           <BrainCircuit className="w-8 h-8 text-cyan-400" />
-        </motion.div>
-
-        {/* Top-Right Radar */}
-        <motion.div
-          animate={{ y: [15, -15, 15] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute top-[20%] right-[20%] w-20 h-20 rounded-full bg-[#020617]/50 border border-cyan-500/40 border-dashed backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] flex items-center justify-center"
-        >
-          <Radar className="w-8 h-8 text-cyan-400" />
         </motion.div>
 
         {/* Bottom-Right Shield */}
         <motion.div
           animate={{ y: [-12, 12, -12] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-[30%] right-[25%] w-20 h-20 rounded-full bg-[#020617]/50 border border-cyan-500/40 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] flex items-center justify-center"
+          className="absolute bottom-[15%] md:bottom-[30%] right-[10%] md:right-[25%] w-20 h-20 rounded-full bg-[#020617]/50 border border-cyan-500/40 backdrop-blur-sm shadow-[0_0_30px_rgba(0,255,255,0.2)] flex items-center justify-center hidden sm:flex"
         >
           <ShieldAlert className="w-8 h-8 text-cyan-400" />
         </motion.div>
       </div>
 
       {/* Bottom Footer Text */}
-      <div className="absolute bottom-4 left-0 w-full flex justify-center text-[9px] sm:text-[10px] font-mono text-muted-foreground/30 z-10 pointer-events-none tracking-widest uppercase">
+      <div className="fixed bottom-4 left-0 w-full flex justify-center text-[9px] sm:text-[10px] font-mono text-muted-foreground/30 z-10 pointer-events-none tracking-widest uppercase">
         NG-SENTRA © 2026 - AUTHORIZED ACCESS ONLY
       </div>
 
-      {/* Top Content (Logo) */}
-      <div className="relative z-20 flex flex-col items-center text-center max-w-2xl -mb-6 -mt-16 shrink-0">
-        <motion.div
-          animate={{
-            y: [-10, 10, -10],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <img
-            src="/logo.png"
-            alt="NG-SENTRA Logo"
-            className="w-72 sm:w-[400px] drop-shadow-[0_0_40px_rgba(0,255,255,0.5)]"
-          />
-        </motion.div>
-      </div>
+      {/* Top Flex Spacer for Perfect Centering */}
+      <div className="flex-grow flex-shrink min-h-[2rem]"></div>
 
-      {/* Login Card */}
-      <div className="relative z-20 w-full max-w-[400px] bg-[#020617]/80 backdrop-blur-md border border-white/5 rounded-2xl p-8 shadow-2xl">
+      {/* Content Wrapper for Scrollable Responsiveness */}
+      <div className="relative z-20 flex flex-col items-center w-full max-w-[400px] mx-auto px-4 sm:px-0 py-8">
+        {/* Top Content (Logo) */}
+        <div className="flex flex-col items-center text-center shrink-0 mb-8 z-10">
+          <motion.div
+            animate={{
+              y: [-10, 10, -10],
+              scale: [1, 1.05, 1],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <img
+              src="/logo.png"
+              alt="NG-SENTRA Logo"
+              className="w-56 sm:w-64 drop-shadow-[0_0_40px_rgba(0,255,255,0.5)] max-w-none"
+            />
+          </motion.div>
+        </div>
+
+        {/* Login Card */}
+        <div className="relative z-20 w-full bg-[#020617]/80 backdrop-blur-md border border-white/5 rounded-2xl p-6 sm:p-8 shadow-2xl shrink-0">
         <AnimatePresence mode="wait">
           {view === "login" && (
             <motion.div key="login" variants={containerVariants} initial="hidden" animate="show" exit="exit" className="space-y-6">
@@ -450,7 +425,11 @@ export default function LoginPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
+
+      {/* Bottom Flex Spacer for Perfect Centering */}
+      <div className="flex-grow flex-shrink min-h-[4rem]"></div>
     </div>
   );
 }

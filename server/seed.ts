@@ -6,6 +6,9 @@
  */
 import { drizzle } from "drizzle-orm/mysql2";
 import { components, soarApproaches, aiModels } from "../drizzle/schema";
+import dotenv from "dotenv";
+dotenv.config();
+dotenv.config({ path: ".env.local", override: true });
 
 // AWS VPC Private IPs — each service on a separate EC2 instance
 const WAZUH_HOST  = process.env.WAZUH_HOST  || "172.31.41.10";

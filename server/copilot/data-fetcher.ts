@@ -1,6 +1,7 @@
 import { Client } from "ssh2";
 import { getSSHConfig } from "../ssh-service";
 import { fetchWazuhAlerts } from "../wazuh-service";
+import fs from "fs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,14 +98,24 @@ async function sshExec(command: string, timeoutMs = 15000): Promise<string> {
     conn.on("error", (err) => { clearTimeout(timer); reject(err); });
     conn.on("keyboard-interactive", (_n, _i, _il, _p, finish) => finish([sshConfig.password]));
 
-    conn.connect({
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 20000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH/DataFetcher] Failed to read key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }
 

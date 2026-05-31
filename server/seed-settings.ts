@@ -12,19 +12,19 @@ const db = drizzle(process.env.DATABASE_URL!);
 const defaults = [
   {
     key: "n8n_base_url",
-    value: "http://192.168.1.14:5678",
+    value: "http://172.31.30.123:5678",
     label: "n8n Base URL",
-    description: "Base URL of your n8n SOAR instance (e.g. http://192.168.1.14:5678)",
+    description: "Base URL of your n8n SOAR instance (e.g. http://172.31.30.123:5678)",
   },
   {
     key: "wazuh_elasticsearch_url",
-    value: "http://192.168.1.14:9200",
+    value: "https://172.31.41.10:9200",
     label: "Wazuh Elasticsearch URL",
     description: "Elasticsearch endpoint used by Wazuh for alert queries",
   },
   {
     key: "local_ai_brain_url",
-    value: "http://192.168.1.14:5000",
+    value: "http://172.31.25.6:5000",
     label: "Local AI Brain URL",
     description: "Internal REST API endpoint for the Local AI Brain / UBA service (Waitress)",
   },
@@ -48,7 +48,7 @@ const defaults = [
   },
   {
     key: "soar_ssh_host",
-    value: "192.168.1.14",
+    value: "172.31.41.10",
     label: "SOAR SSH Host",
     description: "SSH host IP for executing incident_response.py commands (IP & Behavior IR)",
   },
@@ -60,9 +60,15 @@ const defaults = [
   },
   {
     key: "ssh_port",
-    value: "2222",
+    value: "22",
     label: "SSH Port",
-    description: "SSH port for VirtualBox host (default: 2222 via port forwarding)",
+    description: "SSH port (default: 22 for AWS EC2)",
+  },
+  {
+    key: "ssh_private_key_path",
+    value: "/home/ubuntu/.ssh/ng-soc-key",
+    label: "SSH Private Key Path",
+    description: "Path to the SSH private key file on the Web Server for key-based auth (AWS EC2)",
   },
   {
     key: "notification_email",

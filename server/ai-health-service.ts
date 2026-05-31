@@ -14,6 +14,7 @@
 
 import { getSSHConfig } from "./ssh-service";
 import { Client } from "ssh2";
+import fs from "fs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -199,14 +200,24 @@ async function probeSystemdService(
       finish([sshConfig.password]);
     });
 
-    conn.connect({
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 30000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH/AIHealth] Failed to read key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }
 
@@ -285,14 +296,24 @@ async function probeDockerContainer(
       finish([sshConfig.password]);
     });
 
-    conn.connect({
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 30000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH/AIHealth] Failed to read key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }
 

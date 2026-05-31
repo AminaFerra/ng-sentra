@@ -2,12 +2,14 @@ import { Client } from "ssh2";
 import { getDb } from "./db";
 import { eq, inArray } from "drizzle-orm";
 import { systemSettings } from "../drizzle/schema";
+import fs from "fs";
 
 interface SSHConfig {
   host: string;
   port: number;
   user: string;
   password: string;
+  privateKeyPath?: string;
 }
 
 /**
@@ -21,13 +23,20 @@ export async function getSSHConfig(): Promise<SSHConfig | null> {
     const result = await db
       .select()
       .from(systemSettings)
-      .where(inArray(systemSettings.key, ["ssh_host", "ssh_port", "ssh_user", "ssh_password"]));
+      .where(inArray(systemSettings.key, ["ssh_host", "ssh_port", "ssh_user", "ssh_password", "ssh_private_key_path"]));
     const settings = result;
 
     const map: Record<string, string> = {};
     settings.forEach((s: any) => { map[s.key] = s.value ?? ""; });
 
-    if (!map.ssh_host || !map.ssh_user || !map.ssh_password) {
+    // Allow key-based auth without password
+    if (!map.ssh_host || !map.ssh_user) {
+      return null;
+    }
+
+    // Must have either password or private key
+    const keyPath = map.ssh_private_key_path || process.env.SSH_PRIVATE_KEY_PATH;
+    if (!map.ssh_password && !keyPath) {
       return null;
     }
 
@@ -36,6 +45,7 @@ export async function getSSHConfig(): Promise<SSHConfig | null> {
       port: parseInt(map.ssh_port, 10) || 22,
       user: map.ssh_user,
       password: map.ssh_password,
+      privateKeyPath: keyPath,
     };
   } catch (error) {
     console.error("[SSH Service] Failed to get SSH config:", error);
@@ -88,14 +98,25 @@ export async function readFileViaSsh(filePath: string): Promise<string | null> {
       finish([sshConfig.password]);
     });
 
-    conn.connect({
+    // Build connection options — prefer key-based auth for AWS EC2
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 30000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH] Failed to read private key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }
 
@@ -142,14 +163,24 @@ export async function writeFileViaSsh(filePath: string, content: string): Promis
       finish([sshConfig.password]);
     });
 
-    conn.connect({
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 30000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH] Failed to read private key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }
 
@@ -184,13 +215,23 @@ export async function testSSHConnection(): Promise<boolean> {
       finish([sshConfig.password]);
     });
 
-    conn.connect({
+    const connectOpts: any = {
       host: sshConfig.host,
       port: sshConfig.port,
       username: sshConfig.user,
-      password: sshConfig.password,
       tryKeyboard: true,
       readyTimeout: 30000,
-    });
+    };
+    if (sshConfig.privateKeyPath) {
+      try {
+        connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
+      } catch (e: any) {
+        console.warn(`[SSH] Failed to read private key at ${sshConfig.privateKeyPath}:`, e.message);
+      }
+    }
+    if (sshConfig.password) {
+      connectOpts.password = sshConfig.password;
+    }
+    conn.connect(connectOpts);
   });
 }

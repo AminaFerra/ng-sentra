@@ -19,7 +19,7 @@ export function buildSystemPrompt(snapshot: IntelligenceSnapshot): string {
     snapshot.fetchedAt,
     "",
     `== INFRASTRUCTURE ==`,
-    `Target Machine: Ubuntu 22.04 @ 192.168.1.14 (SSH port 2222)`,
+    `Target Infrastructure: AWS EC2 Distributed SOC (Wazuh: 172.31.41.10, n8n: 172.31.30.123, AI: 172.31.25.6, T-Pot: 172.31.13.157)`,
     `SSH Available: ${snapshot.sshAvailable ? "YES" : "NO — SSH data unavailable for this query"}`,
     `Wazuh/OpenSearch Available: ${snapshot.wazuhAvailable ? "YES" : "NO — alert data unavailable for this query"}`,
     ""

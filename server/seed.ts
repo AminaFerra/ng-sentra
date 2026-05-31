@@ -1,13 +1,19 @@
 /**
- * NG-SENTRA Seed Script v1.3
+ * NG-SENTRA Seed Script v2.0 (AWS Distributed)
  * Seeds 7 components (incl. Digital Forensics Workstation), 5 SOAR approaches, 4 AI models.
- * IP: 192.168.1.14 — all ports are defaults.
+ * Each service runs on a separate EC2 instance with its own private IP.
  * Run: npx tsx server/seed.ts
  */
 import { drizzle } from "drizzle-orm/mysql2";
 import { components, soarApproaches, aiModels } from "../drizzle/schema";
 
-const HOST = "192.168.1.14";
+// AWS VPC Private IPs — each service on a separate EC2 instance
+const WAZUH_HOST  = process.env.WAZUH_HOST  || "172.31.41.10";
+const TPOT_HOST   = process.env.TPOT_HOST   || "172.31.13.157";
+const N8N_HOST    = process.env.N8N_HOST     || "172.31.30.123";
+const AI_HOST     = process.env.AI_HOST      || "172.31.25.6";
+const DFWS_HOST   = process.env.DFWS_HOST    || "172.31.36.190";
+const THREAT_HOST = process.env.THREAT_HOST  || "172.31.27.162";
 
 async function seed() {
   const db = drizzle(process.env.DATABASE_URL!);
@@ -20,7 +26,7 @@ async function seed() {
       description: "Core SIEM/XDR — manager, indexer, and Kibana-based dashboard. Central alert hub receiving logs from Snort, UFW, Filebeat, and n8n.",
       icon: "Shield",
       category: "SIEM",
-      url: `https://${HOST}`,
+      url: `https://${WAZUH_HOST}`,
       port: 443,
       accessType: "iframe" as const,
       adminOnly: false,
@@ -56,7 +62,7 @@ async function seed() {
       description: "Multi-honeypot platform (Cowrie, Dionaea, etc.) installed at /opt/tpotce. Includes Attack Map, Kibana, and SpiderFoot dashboards.",
       icon: "Bug",
       category: "Honeypot",
-      url: `https://${HOST}:64297`,
+      url: `https://${TPOT_HOST}:64297`,
       port: 64297,
       accessType: "iframe" as const,
       adminOnly: false,
@@ -80,7 +86,7 @@ async function seed() {
       description: "SOAR automation engine at /opt/n8n-soc. Runs 5 IR workflows: IP, Behavior, File, URL real-time, and URL scheduled.",
       icon: "Zap",
       category: "SOAR",
-      url: `http://${HOST}:5678`,
+      url: `http://${N8N_HOST}:5678`,
       port: 5678,
       accessType: "iframe" as const,
       adminOnly: false,
@@ -121,7 +127,7 @@ async function seed() {
       name: "IP",
       slug: "ip",
       description: "Webhook-triggered IP incident response. Queries Wazuh alerts, runs Local AI Brain for threat scoring, executes UFW block via SSH (incident_response.py), and sends HTML email report via Gemini AI.",
-      webhookUrl: `http://${HOST}:5678/webhook/wazuh-realtime`,
+      webhookUrl: `http://${N8N_HOST}:5678/webhook/wazuh-realtime`,
       enabled: true,
     },
     {
@@ -135,14 +141,14 @@ async function seed() {
       name: "File",
       slug: "file",
       description: "Webhook-triggered file analysis. Receives download events from Windows clients, scans with VirusTotal + Local AI Brain, dynamically deletes malicious files, and sends email alert with Gemini AI analysis.",
-      webhookUrl: `http://${HOST}:5678/webhook/downloaded-file`,
+      webhookUrl: `http://${N8N_HOST}:5678/webhook/downloaded-file`,
       enabled: true,
     },
     {
       name: "URL real-time",
       slug: "url-realtime",
       description: "Real-time URL proxy scan. Browser/proxy sends POST to n8n webhook; checks VirusTotal + Local AI Brain; returns block/allow JSON response instantly. Pushes alert to Wazuh and sends email if malicious.",
-      webhookUrl: `http://${HOST}:5678/webhook/url-scan`,
+      webhookUrl: `http://${N8N_HOST}:5678/webhook/url-scan`,
       enabled: true,
     },
     {
@@ -171,7 +177,7 @@ async function seed() {
       name: "Anomaly Detection",
       slug: "anomaly-detection",
       description: "Local AI Brain integrated in n8n IP/Behavior workflows. Uses Isolation Forest + behavioral baselines to score threat level (HIGH/MEDIUM/LOW) with confidence % and key indicators.",
-      endpointUrl: `http://${HOST}:5000/analyze`,
+      endpointUrl: `http://${AI_HOST}:5000/analyze`,
       status: "unknown" as const,
     },
     {
@@ -185,14 +191,14 @@ async function seed() {
       name: "UBA",
       slug: "uba",
       description: "User Behavior Analytics integrated in n8n Behavior workflow. Queries UBA service for historical IP profiles and previous UFW block actions to enrich behavioral incident response decisions.",
-      endpointUrl: `http://${HOST}:5000/uba`,
+      endpointUrl: `http://${AI_HOST}:5000/uba`,
       status: "unknown" as const,
     },
     {
       name: "Local Threat Intelligence",
       slug: "local-ti",
       description: "Local AI Brain REST API (Waitress server). Central AI hub called by IP, File, URL real-time, and URL scheduled workflows. Returns threat_level, confidence, reason, feature_highlights, and cross_flow_analysis.",
-      endpointUrl: `http://${HOST}:5000`,
+      endpointUrl: `http://${AI_HOST}:5000`,
       status: "unknown" as const,
     },
   ];
@@ -207,7 +213,7 @@ async function seed() {
   }
   console.log("✅ AI models seeded:", aiModelData.map(m => m.name).join(", "));
 
-  console.log("\n🎯 Seed complete — NG-SENTRA v1.3 configured for", HOST);
+  console.log("\n🎯 Seed complete — NG-SENTRA v2.0 configured for AWS distributed architecture");
   process.exit(0);
 }
 

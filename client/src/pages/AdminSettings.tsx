@@ -11,15 +11,16 @@ import { Settings, Save, Eye, EyeOff, Globe, Server, Key, Mail, Network } from "
 import { useLocation } from "wouter";
 
 const settingMeta: Record<string, { label: string; description: string; icon: any; sensitive?: boolean; placeholder: string }> = {
-  n8n_base_url:            { label: "n8n Base URL",             icon: Globe,   placeholder: "http://192.168.1.14:5678",  description: "Base URL of your n8n SOAR instance" },
-  wazuh_elasticsearch_url: { label: "Wazuh Elasticsearch URL",  icon: Server,  placeholder: "http://192.168.1.14:9200",  description: "Elasticsearch endpoint used by Wazuh" },
-  local_ai_brain_url:      { label: "Local AI Brain URL",       icon: Server,  placeholder: "http://192.168.1.14:5000",  description: "REST API endpoint for Local AI Brain / UBA (Waitress)" },
-  soar_ssh_host:           { label: "SOAR SSH Host",            icon: Network, placeholder: "192.168.1.14",              description: "SSH host IP for executing IR scripts (IP & Behavior)" },
+  n8n_base_url:            { label: "n8n Base URL",             icon: Globe,   placeholder: "http://172.31.30.123:5678",  description: "Base URL of your n8n SOAR instance" },
+  wazuh_elasticsearch_url: { label: "Wazuh Elasticsearch URL",  icon: Server,  placeholder: "https://172.31.41.10:9200",  description: "Elasticsearch endpoint used by Wazuh" },
+  local_ai_brain_url:      { label: "Local AI Brain URL",       icon: Server,  placeholder: "http://172.31.25.6:5000",  description: "REST API endpoint for Local AI Brain / UBA (Waitress)" },
+  soar_ssh_host:           { label: "SOAR SSH Host",            icon: Network, placeholder: "172.31.41.10",              description: "SSH host IP for executing IR scripts (IP & Behavior)" },
   soar_ssh_user:           { label: "SOAR SSH User",            icon: Network, placeholder: "ubuntu",                    description: "SSH username for connecting to the SOAR host" },
-  ssh_host:                { label: "SSH Host (Config/Terminal)", icon: Network, placeholder: "192.168.1.14",              description: "SSH host for health checks, config files, and terminal access" },
-  ssh_port:                { label: "SSH Port",                  icon: Network, placeholder: "2222",                      description: "SSH port (2222 for VirtualBox port forwarding)" },
-  ssh_user:                { label: "SSH User (Config/Terminal)", icon: Network, placeholder: "ziad",                      description: "SSH username for config file and terminal access" },
-  ssh_password:            { label: "SSH Password",             icon: Key,     placeholder: "Enter password...",         description: "SSH password for authentication (used by AI health checks)", sensitive: true },
+  ssh_host:                { label: "SSH Host (Config/Terminal)", icon: Network, placeholder: "172.31.41.10",              description: "SSH host for health checks, config files, and terminal access" },
+  ssh_port:                { label: "SSH Port",                  icon: Network, placeholder: "22",                        description: "SSH port (default: 22 for AWS EC2)" },
+  ssh_user:                { label: "SSH User (Config/Terminal)", icon: Network, placeholder: "ubuntu",                    description: "SSH username for config file and terminal access" },
+  ssh_password:            { label: "SSH Password",             icon: Key,     placeholder: "Enter password...",         description: "SSH password for authentication (optional if using key-based auth)", sensitive: true },
+  ssh_private_key_path:    { label: "SSH Private Key Path",     icon: Key,     placeholder: "/home/ubuntu/.ssh/ng-soc-key",  description: "Path to the SSH private key file on the server (for AWS EC2 key-based auth)" },
   virustotal_api_key:      { label: "VirusTotal API Key",       icon: Key,     placeholder: "Enter API key...",          description: "Used by URL real-time IR workflow for VirusTotal lookups", sensitive: true },
   abuseipdb_api_key:       { label: "AbuseIPDB API Key",        icon: Key,     placeholder: "Enter API key...",          description: "Used by IP IR workflow for AbuseIPDB reputation checks", sensitive: true },
   gemini_api_key:          { label: "Google Gemini API Key",    icon: Key,     placeholder: "Enter API key...",          description: "API key for Gemini 2.5 Flash (Alert Classification)", sensitive: true },
@@ -36,6 +37,7 @@ const settingOrder = [
   "ssh_port",
   "ssh_user",
   "ssh_password",
+  "ssh_private_key_path",
   "virustotal_api_key",
   "abuseipdb_api_key",
   "gemini_api_key",
@@ -98,7 +100,7 @@ export default function AdminSettings() {
 
   const groups = [
     { title: "Infrastructure URLs", keys: ["n8n_base_url", "wazuh_elasticsearch_url", "local_ai_brain_url"] },
-    { title: "SSH Configuration", keys: ["soar_ssh_host", "soar_ssh_user", "ssh_host", "ssh_port", "ssh_user", "ssh_password"] },
+    { title: "SSH Configuration", keys: ["soar_ssh_host", "soar_ssh_user", "ssh_host", "ssh_port", "ssh_user", "ssh_password", "ssh_private_key_path"] },
     { title: "API Keys", keys: ["virustotal_api_key", "abuseipdb_api_key", "gemini_api_key"] },
     { title: "Notifications", keys: ["notification_email"] },
   ];

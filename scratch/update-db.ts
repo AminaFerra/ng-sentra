@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
-import { wazuhSettings, systemSettings, components } from "../drizzle/schema.js";
+import { wazuhSettings, components } from "../drizzle/schema.js";
+import { upsertSetting } from "../server/db.js";
 import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
 
@@ -12,10 +13,11 @@ async function run() {
   await db.update(wazuhSettings).set({ elasticsearchUrl: "https://172.31.41.10:9200" });
   
   console.log("Updating systemSettings...");
-  await db.update(systemSettings).set({ value: "https://172.31.41.10:9200" }).where(eq(systemSettings.key, "wazuh_elasticsearch_url"));
-  await db.update(systemSettings).set({ value: "http://172.31.25.6:5000" }).where(eq(systemSettings.key, "local_ai_brain_url"));
-  await db.update(systemSettings).set({ value: "http://172.31.30.123:5678" }).where(eq(systemSettings.key, "n8n_base_url"));
-  await db.update(systemSettings).set({ value: "172.31.41.10" }).where(eq(systemSettings.key, "soar_ssh_host"));
+  await upsertSetting("wazuh_elasticsearch_url", "https://172.31.41.10:9200");
+  await upsertSetting("local_ai_brain_url", "http://172.31.25.6:5000");
+  await upsertSetting("n8n_base_url", "http://172.31.30.123:5678");
+  await upsertSetting("soar_ssh_host", "172.31.41.10");
+  await upsertSetting("ssh_host", "172.31.41.10");
   
   console.log("Updating components...");
   await db.update(components).set({ url: "https://172.31.41.10" }).where(eq(components.slug, "wazuh"));

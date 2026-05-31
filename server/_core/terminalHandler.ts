@@ -39,14 +39,19 @@ export function setupTerminalHandler(httpServer: Server) {
               const component = await getComponentBySlug(data.componentSlug);
               
               if (component?.customCommand) {
-                // Execute custom docker/ssh command configured in DB
-                sshClient!.exec(component.customCommand, { pty: true }, (err, s) => {
+                // Execute custom docker/ssh command by injecting it into a full interactive shell
+                sshClient!.shell({ term: 'xterm-256color' }, (err, s) => {
                   if (err) {
-                    ws.send(JSON.stringify({ type: "error", message: "Failed to execute custom command" }));
+                    ws.send(JSON.stringify({ type: "error", message: "Failed to start shell" }));
                     return;
                   }
                   stream = s;
                   handleStream(stream, ws);
+                  
+                  // Inject the custom command into the fully established interactive shell
+                  setTimeout(() => {
+                    stream.write(component.customCommand + '\r');
+                  }, 500);
                 });
                 return;
               }
@@ -90,7 +95,8 @@ export function setupTerminalHandler(httpServer: Server) {
 
           if (sshConfig.privateKeyPath) {
             try {
-              connectOpts.privateKey = require('fs').readFileSync(sshConfig.privateKeyPath);
+              const fs = await import('fs');
+              connectOpts.privateKey = fs.readFileSync(sshConfig.privateKeyPath);
             } catch (e: any) {
               console.warn(`[Terminal] Failed to read private key at ${sshConfig.privateKeyPath}:`, e.message);
             }

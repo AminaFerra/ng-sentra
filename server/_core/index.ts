@@ -86,10 +86,6 @@ app.use('/proxy/:slug', async (req, res, next) => {
   try {
     const slug = req.params.slug;
     
-    if (proxyInstances[slug]) {
-      return proxyInstances[slug](req, res, next);
-    }
-
     const { getAllComponents } = await import("../db");
     const components = await getAllComponents();
     const component = components.find((c: any) => c.slug === slug);
@@ -111,80 +107,85 @@ app.use('/proxy/:slug', async (req, res, next) => {
       // Fallback if not a valid URL
     }
 
-    // Create and cache the proxy instance
-    proxyInstances[slug] = createProxyMiddleware({
-      target: origin,
-      changeOrigin: true,
-      secure: false, // Bypass self-signed cert errors
-      pathRewrite: (path, req) => {
-        // If the user requests the exact proxy root, route them to the specific path configured in the DB
-        if (path === `/proxy/${slug}` || path === `/proxy/${slug}/`) {
-          return targetPath || '/';
-        }
-        // For all other requests (like assets /static/..., /bundles/...), strip the proxy prefix
-        // and fetch them from the root of the target server
-        return path.replace(new RegExp(`^/proxy/${slug}`), '');
-      },
-      selfHandleResponse: true, // We handle ALL responses ourselves
-      on: {
-        proxyRes: responseInterceptor(async (responseBuffer: Buffer, proxyRes: any, req: any, res: any) => {
-          const contentType = proxyRes.headers['content-type'] || '';
-          const basePath = `/proxy/${slug}`;
+    // Cache proxy instances by a combination of slug and target origin.
+    // This allows the proxy to dynamically switch if the user changes the URL in the UI!
+    const cacheKey = `${slug}_${origin}`;
 
-          // 1. Handle Redirects (301, 302, 307, 308)
-          if ([301, 302, 307, 308].includes(proxyRes.statusCode || 200)) {
-            const location = proxyRes.headers.location;
-            if (location && location.startsWith('/')) {
-              res.setHeader('location', `/proxy/${slug}${location}`);
+    if (!proxyInstances[cacheKey]) {
+      proxyInstances[cacheKey] = createProxyMiddleware({
+        target: origin,
+        changeOrigin: true,
+        secure: false, // Bypass self-signed cert errors
+        pathRewrite: (path, req) => {
+          // If the user requests the exact proxy root, route them to the specific path configured in the DB
+          if (path === `/proxy/${slug}` || path === `/proxy/${slug}/`) {
+            return targetPath || '/';
+          }
+          // For all other requests (like assets /static/..., /bundles/...), strip the proxy prefix
+          // and fetch them from the root of the target server
+          return path.replace(new RegExp(`^/proxy/${slug}`), '');
+        },
+        selfHandleResponse: true, // We handle ALL responses ourselves
+        on: {
+          proxyRes: responseInterceptor(async (responseBuffer: Buffer, proxyRes: any, req: any, res: any) => {
+            const contentType = proxyRes.headers['content-type'] || '';
+            const basePath = `/proxy/${slug}`;
+
+            // 1. Handle Redirects (301, 302, 307, 308)
+            if ([301, 302, 307, 308].includes(proxyRes.statusCode || 200)) {
+              const location = proxyRes.headers.location;
+              if (location && location.startsWith('/')) {
+                res.setHeader('location', `/proxy/${slug}${location}`);
+              }
+              return responseBuffer;
             }
+
+            // 2. Handle HTML rewriting for SPAs (Kibana/Wazuh/n8n)
+            if (contentType.includes('text/html')) {
+              let html = responseBuffer.toString('utf8');
+
+              // Rewrite Kibana/OpenSearch Dashboards basePath dynamically!
+              html = html.replace(/&quot;basePath&quot;:&quot;&quot;/g, `&quot;basePath&quot;:&quot;${basePath}&quot;`);
+              html = html.replace(/&quot;serverBasePath&quot;:&quot;&quot;/g, `&quot;serverBasePath&quot;:&quot;${basePath}&quot;`);
+
+              // Rewrite absolute paths for n8n and T-Pot (e.g., src="/assets/..." -> src="/proxy/slug/assets/...")
+              html = html.replace(/href="\//g, `href="${basePath}/`);
+              html = html.replace(/src="\//g, `src="${basePath}/`);
+
+              // Inject <base> tag and unsafe-url referrer policy
+              if (!html.includes('<base href=')) {
+                html = html.replace('<head>', `<head><base href="${basePath}/" /><meta name="referrer" content="unsafe-url" />`);
+              }
+
+              return html;
+            }
+
+            // 3. Handle Javascript rewriting for n8n
+            if (contentType.includes('javascript') || contentType.includes('application/x-javascript')) {
+              let js = responseBuffer.toString('utf8');
+              if (js.includes("window.BASE_PATH = '/'")) {
+                js = js.replace("window.BASE_PATH = '/'", `window.BASE_PATH = '${basePath}/'`);
+              }
+              if (js.includes('window.BASE_PATH="/"')) {
+                js = js.replace('window.BASE_PATH="/"', `window.BASE_PATH="${basePath}/"`);
+              }
+              // Rewrite dynamic import paths hardcoded inside Vite bundles
+              js = js.replace(/"\/assets\//g, `"${basePath}/assets/`);
+              js = js.replace(/'\/assets\//g, `'${basePath}/assets/`);
+              js = js.replace(/"\/static\//g, `"${basePath}/static/`);
+              js = js.replace(/'\/static\//g, `'${basePath}/static/`);
+              return js;
+            }
+
+            // For everything else (JSON, SSE, images, etc.) return as-is
             return responseBuffer;
-          }
-
-          // 2. Handle HTML rewriting for SPAs (Kibana/Wazuh/n8n)
-          if (contentType.includes('text/html')) {
-            let html = responseBuffer.toString('utf8');
-
-            // Rewrite Kibana/OpenSearch Dashboards basePath dynamically!
-            html = html.replace(/&quot;basePath&quot;:&quot;&quot;/g, `&quot;basePath&quot;:&quot;${basePath}&quot;`);
-            html = html.replace(/&quot;serverBasePath&quot;:&quot;&quot;/g, `&quot;serverBasePath&quot;:&quot;${basePath}&quot;`);
-
-            // Rewrite absolute paths for n8n and T-Pot (e.g., src="/assets/..." -> src="/proxy/slug/assets/...")
-            html = html.replace(/href="\//g, `href="${basePath}/`);
-            html = html.replace(/src="\//g, `src="${basePath}/`);
-
-            // Inject <base> tag and unsafe-url referrer policy
-            if (!html.includes('<base href=')) {
-              html = html.replace('<head>', `<head><base href="${basePath}/" /><meta name="referrer" content="unsafe-url" />`);
-            }
-
-            return html;
-          }
-
-          // 3. Handle Javascript rewriting for n8n
-          if (contentType.includes('javascript') || contentType.includes('application/x-javascript')) {
-            let js = responseBuffer.toString('utf8');
-            if (js.includes("window.BASE_PATH = '/'")) {
-              js = js.replace("window.BASE_PATH = '/'", `window.BASE_PATH = '${basePath}/'`);
-            }
-            if (js.includes('window.BASE_PATH="/"')) {
-              js = js.replace('window.BASE_PATH="/"', `window.BASE_PATH="${basePath}/"`);
-            }
-            // Rewrite dynamic import paths hardcoded inside Vite bundles
-            js = js.replace(/"\/assets\//g, `"${basePath}/assets/`);
-            js = js.replace(/'\/assets\//g, `'${basePath}/assets/`);
-            js = js.replace(/"\/static\//g, `"${basePath}/static/`);
-            js = js.replace(/'\/static\//g, `'${basePath}/static/`);
-            return js;
-          }
-
-          // For everything else (JSON, SSE, images, etc.) return as-is
-          return responseBuffer;
-        }),
-      },
-    });
+          }),
+        },
+      });
+    }
 
     // Execute the proxy
-    proxyInstances[slug](req, res, next);
+    proxyInstances[cacheKey](req, res, next);
   } catch (error) {
     console.error("[Proxy Error]:", error);
     res.status(500).send("Proxy routing failed");

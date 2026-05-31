@@ -79,14 +79,24 @@ export function setupTerminalHandler(httpServer: Server) {
             finish([sshConfig.password]);
           });
 
-          sshClient.connect({
+          const connectOpts: any = {
             host: sshConfig.host,
             port: sshConfig.port,
             username: sshConfig.user,
             password: sshConfig.password,
             tryKeyboard: true,
             readyTimeout: 30000,
-          });
+          };
+
+          if (sshConfig.privateKeyPath) {
+            try {
+              connectOpts.privateKey = require('fs').readFileSync(sshConfig.privateKeyPath);
+            } catch (e: any) {
+              console.warn(`[Terminal] Failed to read private key at ${sshConfig.privateKeyPath}:`, e.message);
+            }
+          }
+
+          sshClient.connect(connectOpts);
 
         } else if (data.type === "input" && stream) {
           stream.write(data.data);

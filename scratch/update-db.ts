@@ -18,6 +18,7 @@ async function run() {
   await upsertSetting("n8n_base_url", "http://172.31.30.123:5678");
   await upsertSetting("soar_ssh_host", "172.31.41.10");
   await upsertSetting("ssh_host", "172.31.41.10");
+  await upsertSetting("ssh_user", "ubuntu");
   
   console.log("Updating components...");
   await db.update(components).set({ url: "https://172.31.41.10" }).where(eq(components.slug, "wazuh"));
